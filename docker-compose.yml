@@ -1,0 +1,18 @@
+services:
+  ghwt:
+    build: .
+    ports:
+      - "4498:3000"
+    environment:
+      - SOURCE_BASE_PATH=/home/node/Source
+      - NODE_ENV=production
+    volumes:
+      - /Users/nicolas/Source:/home/node/Source
+      - /Users/nicolas/Source/git-root:/home/node/Source/git-root
+      - gh-config:/home/node/.config/gh
+      - app-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  gh-config:
+  app-data:
