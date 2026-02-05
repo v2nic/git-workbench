@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback, useState } from 'react'
 import { useWorktrees } from '../data/useWorktrees'
 import { useRepos } from '../data/useRepos'
+import { usePullRequests } from '../data/usePullRequests'
 import { WorktreeRow } from './WorktreeRow'
 import { DeleteWorktreeModal } from './DeleteWorktreeModal'
 import { Button } from './ui/Button'
@@ -15,11 +16,13 @@ interface WorktreesViewProps {
   onClearFilter?: () => void
   onSuccess?: (message: string) => void
   onError?: (message: string) => void
+  onNavigateToPR?: (prNumber: number, prRepository: string) => void
 }
 
-export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo, onClearFilter, onSuccess, onError }: WorktreesViewProps) {
+export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo, onClearFilter, onSuccess, onError, onNavigateToPR }: WorktreesViewProps) {
   const { worktrees, isLoading, error, mutate } = useWorktrees()
   const { repos } = useRepos()
+  const { pullRequests } = usePullRequests()
   
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [pendingDeleteWorktree, setPendingDeleteWorktree] = useState<Worktree | null>(null)
@@ -212,6 +215,8 @@ export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo
                             worktree={worktree}
                             onDeleteWorktree={handleDeleteWorktree}
                             onCreateFromBranch={onCreateFromBranch}
+                            allPullRequests={pullRequests}
+                            onNavigateToPR={onNavigateToPR}
                           />
                         ))}
                       </div>

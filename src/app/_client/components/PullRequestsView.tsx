@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react'
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { usePullRequests } from '../data/usePullRequests'
 import { PRRow } from './PRRow'
 import { Button } from './ui/Button'
@@ -15,15 +15,38 @@ interface PullRequestsViewProps {
   onCreateFromBranch?: (repoName: string, branchName: string) => void
   onSuccess?: (message: string) => void
   onError?: (message: string) => void
+  highlightPRNumber?: number
+  highlightPRRepository?: string
 }
 
-export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSuccess, onError }: PullRequestsViewProps) {
+export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSuccess, onError, highlightPRNumber, highlightPRRepository }: PullRequestsViewProps) {
   const { pullRequests, isLoading, error, cached, rateLimited, timestamp, retryInSeconds, errorMessage, updateAvailable, refreshPullRequests } = usePullRequests()
   const [searchQuery, setSearchQuery] = useState('')
   const [groupBy, setGroupBy] = useState<GroupBy>('repository')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [animatingPRKey, setAnimatingPRKey] = useState<string | null>(null)
+  const prRowRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
   const retryLabel = retryInSeconds ?? 10
+
+  useEffect(() => {
+    if (highlightPRNumber && highlightPRRepository) {
+      const prKey = `${highlightPRRepository}-${highlightPRNumber}`
+      setAnimatingPRKey(prKey)
+      
+      const prElement = prRowRefs.current.get(prKey)
+      if (prElement) {
+        setTimeout(() => {
+          prElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }, 100)
+      }
+      
+      const animationDuration = 4000
+      setTimeout(() => {
+        setAnimatingPRKey(null)
+      }, animationDuration)
+    }
+  }, [highlightPRNumber, highlightPRRepository])
 
   // Filter and group pull requests
   const filteredAndGroupedPRs = useMemo(() => {
@@ -254,15 +277,33 @@ export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSucce
                     </h3>
                   </div>
                 )}
-                {prs.map((pr) => (
-                  <PRRow
-                    key={`${pr.repository}-${pr.number}`}
-                    pr={pr}
-                    onCopyNumber={handleCopyNumber}
-                    onCreateWorktree={onCreateWorktree}
-                    onCreateFromBranch={onCreateFromBranch}
-                  />
-                ))}
+                {prs.map((pr) => {
+                  const prKey = `${pr.repository}-${pr.number}`
+                  const isAnimating = animatingPRKey === prKey
+                  return (
+                    <div
+                      key={prKey}
+                      ref={(el) => {
+                        if (el) {
+                          prRowRefs.current.set(prKey, el)
+                        } else {
+                          prRowRefs.current.delete(prKey)
+                        }
+                      }}
+                      className={clsx(
+                        'transition-all duration-300',
+                        isAnimating && 'animate-pr-glow'
+                      )}
+                    >
+                      <PRRow
+                        pr={pr}
+                        onCopyNumber={handleCopyNumber}
+                        onCreateWorktree={onCreateWorktree}
+                        onCreateFromBranch={onCreateFromBranch}
+                      />
+                    </div>
+                  )
+                })}
               </div>
             ))}
           </div>

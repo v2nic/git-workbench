@@ -31,6 +31,8 @@ export default function AppShell() {
   const [selectedRepo, setSelectedRepo] = useState('')
   const [fromBranch, setFromBranch] = useState<string | undefined>()
   const [worktreeFilterRepo, setWorktreeFilterRepo] = useState<string | undefined>()
+  const [highlightPRNumber, setHighlightPRNumber] = useState<number | undefined>()
+  const [highlightPRRepository, setHighlightPRRepository] = useState<string | undefined>()
 
   const handleToggleFavorite = useCallback((repoName: string) => {
     mutateConfig()
@@ -58,6 +60,12 @@ export default function AppShell() {
     if (tab !== 'worktrees') {
       setWorktreeFilterRepo(undefined) // Clear filter when leaving worktrees tab
     }
+  }, [])
+
+  const handleNavigateToPR = useCallback((prNumber: number, prRepository: string) => {
+    setHighlightPRNumber(prNumber)
+    setHighlightPRRepository(prRepository)
+    setActiveTab('pull-requests')
   }, [])
 
   const handleClearWorktreeFilter = useCallback(() => {
@@ -166,6 +174,7 @@ export default function AppShell() {
             onClearFilter={handleClearWorktreeFilter}
             onSuccess={success}
             onError={error}
+            onNavigateToPR={handleNavigateToPR}
           />
         )}
 
@@ -175,6 +184,8 @@ export default function AppShell() {
             onCreateFromBranch={handleCreateFromBranch}
             onSuccess={success}
             onError={error}
+            highlightPRNumber={highlightPRNumber}
+            highlightPRRepository={highlightPRRepository}
           />
         )}
       </main>

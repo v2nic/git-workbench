@@ -2,21 +2,31 @@ import React, { memo, useCallback } from 'react'
 import { Worktree } from '@/types/worktrees'
 import { usePullRequest } from '../data/usePullRequest'
 import { Button } from './ui/Button'
-import { ExternalLink, Copy, GitBranch, MoreVertical, FolderOpen } from 'lucide-react'
+import { ExternalLink, Copy, GitBranch, MoreVertical, FolderOpen, GitPullRequest } from 'lucide-react'
+import { PRNotification } from '@/types/github'
 import clsx from 'clsx'
 
 interface WorktreeRowProps {
   worktree: Worktree
   onDeleteWorktree: (worktree: Worktree) => void
   onCreateFromBranch: (repoName: string, branchName: string) => void
+  allPullRequests?: PRNotification[]
+  onNavigateToPR?: (prNumber: number, prRepository: string) => void
 }
 
 export const WorktreeRow = memo(function WorktreeRow({
   worktree,
   onDeleteWorktree,
-  onCreateFromBranch
+  onCreateFromBranch,
+  allPullRequests = [],
+  onNavigateToPR
 }: WorktreeRowProps) {
   const { pullRequests } = usePullRequest(worktree.repoFullName || '', worktree.branch)
+  
+  const matchingPR = allPullRequests.find(pr => 
+    pr.headRef === worktree.branch && 
+    pr.repository.toLowerCase() === (worktree.repoFullName || '').toLowerCase()
+  )
 
   const handleOpenInGitHub = useCallback(() => {
     if (worktree.repoFullName) {
@@ -53,6 +63,12 @@ export const WorktreeRow = memo(function WorktreeRow({
     const repoName = worktree.repoFullName || worktree.repoName
     onCreateFromBranch(repoName, worktree.branch)
   }, [worktree, onCreateFromBranch])
+
+  const handleNavigateToPR = useCallback(() => {
+    if (matchingPR && onNavigateToPR) {
+      onNavigateToPR(matchingPR.number, matchingPR.repository)
+    }
+  }, [matchingPR, onNavigateToPR])
 
   // Extract worktree name from path (last directory name)
   const worktreeName = worktree.pathRelativeToHome.split('/').pop() || worktree.pathRelativeToHome
@@ -127,6 +143,15 @@ export const WorktreeRow = memo(function WorktreeRow({
                     <span className="text-green-600 dark:text-green-400">
                       clean
                     </span>
+                  )}
+                  {matchingPR && (
+                    <button
+                      onClick={handleNavigateToPR}
+                      className="text-green-500 hover:text-green-600 transition-colors"
+                      title={`Go to PR #${matchingPR.number}`}
+                    >
+                      <GitPullRequest className="w-3 h-3" />
+                    </button>
                   )}
                 </div>
               )}
