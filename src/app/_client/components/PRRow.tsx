@@ -1,6 +1,6 @@
 import React, { memo, useCallback } from 'react'
 import { Button } from './ui/Button'
-import { GitPullRequest, CheckCircle, XCircle, AlertCircle, Clock, Copy, ExternalLink, FolderPlus } from 'lucide-react'
+import { GitPullRequest, CheckCircle, XCircle, AlertCircle, Clock, Copy, ExternalLink, FolderPlus, Github, Star } from 'lucide-react'
 import { PRNotification } from '@/types/github'
 import { useUserInfo } from '../data/useUserInfo'
 import { useWorktrees } from '../data/useWorktrees'
@@ -9,9 +9,11 @@ import clsx from 'clsx'
 interface PRRowProps {
   pr: PRNotification
   onCopyNumber?: (number: number) => void
+  onCreateWorktree?: (repoName: string) => void
+  onCreateFromBranch?: (repoName: string, branchName: string) => void
 }
 
-export const PRRow = memo(function PRRow({ pr, onCopyNumber }: PRRowProps) {
+export const PRRow = memo(function PRRow({ pr, onCopyNumber, onCreateWorktree, onCreateFromBranch }: PRRowProps) {
   const { userInfo } = useUserInfo()
   const { worktrees } = useWorktrees()
 
@@ -43,10 +45,16 @@ export const PRRow = memo(function PRRow({ pr, onCopyNumber }: PRRowProps) {
   }, [pr.headRef, worktrees])
 
   const handleCreateWorktree = useCallback(() => {
-    // This would open a dialog or navigate to worktree creation
-    // For now, we'll just log it
-    console.log('Create worktree for branch:', pr.headRef)
-  }, [pr.headRef])
+    if (onCreateFromBranch) {
+      // Extract the repository name without owner for the worktree API
+      const repoName = pr.repository.split('/')[1] || pr.repository
+      onCreateFromBranch(repoName, pr.headRef)
+    } else if (onCreateWorktree) {
+      // Fallback to basic create worktree if onCreateFromBranch not available
+      const repoName = pr.repository.split('/')[1] || pr.repository
+      onCreateWorktree(repoName)
+    }
+  }, [onCreateFromBranch, onCreateWorktree, pr.repository, pr.headRef])
 
   const getRelativeTime = (dateString: string) => {
     const date = new Date(dateString)
@@ -65,7 +73,7 @@ export const PRRow = memo(function PRRow({ pr, onCopyNumber }: PRRowProps) {
   }
 
   const hasMatchingWorktree = worktrees.some(w => w.branch === pr.headRef)
-  const isCurrentUserAuthor = userInfo.githubUsername === pr.author.login
+  const isCurrentUserAuthor = userInfo?.githubUsername === pr.author.login
 
   const getStatusIcon = () => {
     if (pr.merged) {
@@ -107,7 +115,7 @@ export const PRRow = memo(function PRRow({ pr, onCopyNumber }: PRRowProps) {
       reviewed: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
       commenter: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
       notification: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      favorite: 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200'
+      favorite: 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900 dark:text-yellow-300'
     }
 
     const labels = {
@@ -124,7 +132,11 @@ export const PRRow = memo(function PRRow({ pr, onCopyNumber }: PRRowProps) {
         'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium',
         colors[pr.reason]
       )}>
-        {labels[pr.reason]}
+        {pr.reason === 'favorite' ? (
+          <Star className="w-3 h-3 text-yellow-500 fill-yellow-500 dark:text-yellow-300 dark:fill-yellow-300" />
+        ) : (
+          labels[pr.reason]
+        )}
       </span>
     )
   }
@@ -137,6 +149,13 @@ export const PRRow = memo(function PRRow({ pr, onCopyNumber }: PRRowProps) {
       minute: '2-digit'
     })
   }
+
+  const authorBadgeClasses = clsx(
+    'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium',
+    isCurrentUserAuthor
+      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+      : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+  )
 
   return (
     <div className="p-4 border-b hover:bg-muted/30 transition-colors">
@@ -185,32 +204,32 @@ export const PRRow = memo(function PRRow({ pr, onCopyNumber }: PRRowProps) {
                   title={pr.author.login}
                 />
               )}
-              {isCurrentUserAuthor && (
-                <span className="text-xs text-muted-foreground">
-                  Author
-                </span>
-              )}
+              <span className={authorBadgeClasses}>
+                {`@${pr.author.login}`}
+              </span>
             </div>
           </div>
         </div>
-        <div className="flex items-center space-x-1 ml-4">
+        <div className="flex items-center space-x-2 ml-4">
           {hasMatchingWorktree ? (
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               onClick={handleOpenWorktree}
               title="Open worktree"
             >
-              <ExternalLink className="w-4 h-4" />
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Open
             </Button>
           ) : (
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               onClick={handleCreateWorktree}
               title={`Create worktree for ${pr.headRef}`}
             >
-              <FolderPlus className="w-4 h-4" />
+              <FolderPlus className="w-4 h-4 mr-2" />
+              Create Worktree
             </Button>
           )}
           <Button

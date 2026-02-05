@@ -169,7 +169,12 @@ export default function AppShell() {
         )}
 
         {activeTab === 'pull-requests' && (
-          <PullRequestsView />
+          <PullRequestsView
+            onCreateWorktree={handleCreateWorktree}
+            onCreateFromBranch={handleCreateFromBranch}
+            onSuccess={success}
+            onError={error}
+          />
         )}
       </main>
 

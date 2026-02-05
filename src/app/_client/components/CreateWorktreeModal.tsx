@@ -26,6 +26,17 @@ export function CreateWorktreeModal({
   const [startPoint, setStartPoint] = useState(fromBranch || 'origin/main')
   const [isCreating, setIsCreating] = useState(false)
 
+  // Auto-populate worktree name from branch when fromBranch is provided
+  useEffect(() => {
+    if (fromBranch && isOpen) {
+      // Extract the branch name without "origin/" prefix if present
+      const cleanBranchName = fromBranch.replace(/^origin\//, '')
+      setWorktreeName(cleanBranchName)
+      setBranchName(cleanBranchName)
+      setStartPoint(cleanBranchName) // Update startPoint to use the PR's branch name
+    }
+  }, [fromBranch, isOpen])
+
   // Auto-populate branch name when worktree name changes, unless user has manually edited it
   useEffect(() => {
     if (worktreeName && !branchName) {
@@ -38,7 +49,7 @@ export function CreateWorktreeModal({
       onClose()
       setWorktreeName('')
       setBranchName('')
-      setStartPoint(fromBranch || 'origin/main')
+      setStartPoint('origin/main')
     }
   }
 
@@ -84,7 +95,7 @@ export function CreateWorktreeModal({
       onClose()
       setWorktreeName('')
       setBranchName('')
-      setStartPoint(fromBranch || 'origin/main')
+      setStartPoint('origin/main')
     } catch (error) {
       console.error('Failed to create worktree:', error)
       // Error handling is done in the parent component

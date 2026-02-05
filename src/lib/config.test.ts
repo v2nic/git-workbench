@@ -1,31 +1,51 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { promises as fs } from 'fs'
-import path from 'path'
-import { getConfig, saveConfig, addRepo, removeRepo, toggleFavorite } from './config'
-import { RepoConfig } from '@/types/config'
+import type { RepoConfig } from '../types/config'
+
+const mockReadFile = vi.fn()
+const mockWriteFile = vi.fn()
 
 // Mock fs module
 vi.mock('fs', () => ({
+  default: {
+    promises: {
+      readFile: mockReadFile,
+      writeFile: mockWriteFile
+    }
+  },
   promises: {
-    readFile: vi.fn(),
-    writeFile: vi.fn()
+    readFile: mockReadFile,
+    writeFile: mockWriteFile
   }
 }))
 
 // Mock path module
 vi.mock('path', () => ({
   default: {
-    join: vi.fn((...args) => args.join('/'))
-  }
+    join: vi.fn((...args: string[]) => args.join('/'))
+  },
+  join: vi.fn((...args: string[]) => args.join('/'))
 }))
 
-const mockFs = vi.mocked(fs)
+let getConfig: typeof import('./config').getConfig
+let saveConfig: typeof import('./config').saveConfig
+let addRepo: typeof import('./config').addRepo
+let removeRepo: typeof import('./config').removeRepo
+let toggleFavorite: typeof import('./config').toggleFavorite
 
 describe('config', () => {
   const mockConfigPath = '/app/data/repos-tracked.json'
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
+    vi.resetModules()
+    process.env.APP_DATA_PATH = '/app/data'
+
+    const mod = await import('./config')
+    getConfig = mod.getConfig
+    saveConfig = mod.saveConfig
+    addRepo = mod.addRepo
+    removeRepo = mod.removeRepo
+    toggleFavorite = mod.toggleFavorite
   })
 
   describe('getConfig', () => {
@@ -36,25 +56,25 @@ describe('config', () => {
         repos: []
       }
 
-      mockFs.readFile.mockResolvedValue(JSON.stringify(mockConfig))
+      mockReadFile.mockResolvedValue(JSON.stringify(mockConfig))
 
       const config = await getConfig()
 
       expect(config).toEqual(mockConfig)
-      expect(mockFs.readFile).toHaveBeenCalledWith(mockConfigPath, 'utf-8')
+      expect(mockReadFile).toHaveBeenCalledWith(mockConfigPath, 'utf-8')
     })
 
     it('should return default config when file does not exist', async () => {
       const error = new Error('File not found') as any
       error.code = 'ENOENT'
-      mockFs.readFile.mockRejectedValue(error)
+      mockReadFile.mockRejectedValue(error)
 
       const config = await getConfig()
 
       expect(config.version).toBe(1)
       expect(config.paths.bareRoot).toBe('~/Source/git-root')
       expect(config.repos).toEqual([])
-      expect(mockFs.writeFile).toHaveBeenCalled()
+      expect(mockWriteFile).toHaveBeenCalled()
     })
   })
 
@@ -68,7 +88,7 @@ describe('config', () => {
 
       await saveConfig(mockConfig)
 
-      expect(mockFs.writeFile).toHaveBeenCalledWith(
+      expect(mockWriteFile).toHaveBeenCalledWith(
         mockConfigPath,
         JSON.stringify(mockConfig, null, 2),
         'utf-8'
@@ -90,8 +110,8 @@ describe('config', () => {
         favorite: false
       }
 
-      mockFs.readFile.mockResolvedValue(JSON.stringify(existingConfig))
-      mockFs.writeFile.mockResolvedValue()
+      mockReadFile.mockResolvedValue(JSON.stringify(existingConfig))
+      mockWriteFile.mockResolvedValue(undefined)
 
       const config = await addRepo(newRepo)
 
@@ -118,8 +138,8 @@ describe('config', () => {
         favorite: true
       }
 
-      mockFs.readFile.mockResolvedValue(JSON.stringify(existingConfig))
-      mockFs.writeFile.mockResolvedValue()
+      mockReadFile.mockResolvedValue(JSON.stringify(existingConfig))
+      mockWriteFile.mockResolvedValue(undefined)
 
       const config = await addRepo(updatedRepo)
 
@@ -148,8 +168,8 @@ describe('config', () => {
         repos: [repo1, repo2]
       }
 
-      mockFs.readFile.mockResolvedValue(JSON.stringify(existingConfig))
-      mockFs.writeFile.mockResolvedValue()
+      mockReadFile.mockResolvedValue(JSON.stringify(existingConfig))
+      mockWriteFile.mockResolvedValue(undefined)
 
       const config = await removeRepo('test/repo1')
 
@@ -172,8 +192,8 @@ describe('config', () => {
         repos: [repo]
       }
 
-      mockFs.readFile.mockResolvedValue(JSON.stringify(existingConfig))
-      mockFs.writeFile.mockResolvedValue()
+      mockReadFile.mockResolvedValue(JSON.stringify(existingConfig))
+      mockWriteFile.mockResolvedValue(undefined)
 
       const config = await toggleFavorite('test/repo')
 

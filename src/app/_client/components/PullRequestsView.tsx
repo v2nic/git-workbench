@@ -1,38 +1,27 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react'
+import React, { useMemo, useState, useCallback } from 'react'
 import { usePullRequests } from '../data/usePullRequests'
 import { PRRow } from './PRRow'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
-import { GitPullRequest, CheckCircle, Users, AlertTriangle } from 'lucide-react'
+import { GitPullRequest, CheckCircle, Users, AlertTriangle, XCircle, RefreshCw } from 'lucide-react'
 import { PRNotification } from '@/types/github'
 import clsx from 'clsx'
 
 type GroupBy = 'none' | 'repository' | 'reason'
 
-export function PullRequestsView() {
-  const { pullRequests, isLoading, error, cached, rateLimited, timestamp, mutate } = usePullRequests()
+interface PullRequestsViewProps {
+  onCreateWorktree?: (repoName: string) => void
+  onCreateFromBranch?: (repoName: string, branchName: string) => void
+  onSuccess?: (message: string) => void
+  onError?: (message: string) => void
+}
+
+export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSuccess, onError }: PullRequestsViewProps) {
+  const { pullRequests, isLoading, error, cached, rateLimited, timestamp, retryInSeconds, errorMessage, updateAvailable, refreshPullRequests } = usePullRequests()
   const [searchQuery, setSearchQuery] = useState('')
   const [groupBy, setGroupBy] = useState<GroupBy>('repository')
-  const [retryCountdown, setRetryCountdown] = useState<number | null>(null)
 
-  // Handle retry countdown when rate limited
-  useEffect(() => {
-    if (rateLimited && retryCountdown === null) {
-      setRetryCountdown(10)
-    }
-    
-    if (retryCountdown !== null && retryCountdown > 0) {
-      const timer = setTimeout(() => {
-        setRetryCountdown(retryCountdown - 1)
-      }, 1000)
-      
-      return () => clearTimeout(timer)
-    } else if (retryCountdown === 0) {
-      // Retry when countdown reaches 0
-      setRetryCountdown(null)
-      mutate()
-    }
-  }, [rateLimited, retryCountdown, mutate])
+  const retryLabel = retryInSeconds ?? 10
 
   // Filter and group pull requests
   const filteredAndGroupedPRs = useMemo(() => {
@@ -119,21 +108,40 @@ export function PullRequestsView() {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Rate limit banner */}
-      {rateLimited && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 px-4 py-3">
+    <div className="h-full flex flex-col relative">
+      {/* Update banner */}
+      {updateAvailable && (
+        <div className="bg-green-50 dark:bg-green-900/20 border-b border-green-200 dark:border-green-800 px-4 py-3">
           <div className="flex items-center space-x-3">
-            <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
+            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
             <div className="flex-1">
-              <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                Rate limited, showing cached results. Retrying in {retryCountdown || 10}...
+              <p className="text-sm text-green-800 dark:text-green-200">
+                Pull Requests updated
               </p>
-              {cached && timestamp && (
-                <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                  Data cached at {new Date(timestamp).toLocaleTimeString()}
-                </p>
-              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refreshPullRequests}
+              className="text-green-700 hover:text-green-900 dark:text-green-300 dark:hover:text-green-100"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Error banner */}
+      {errorMessage && (
+        <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 px-4 py-3">
+          <div className="flex items-center space-x-3">
+            <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm text-red-800 dark:text-red-200">
+                Error fetching. Retrying...
+              </p>
+              <p className="text-xs text-red-600 dark:text-red-400 mt-1">{errorMessage}</p>
             </div>
           </div>
         </div>
@@ -156,12 +164,6 @@ export function PullRequestsView() {
               <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
               <span>{getStats.draft} draft</span>
             </div>
-            {cached && (
-              <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                <span>📦</span>
-                <span>Cached</span>
-              </div>
-            )}
           </div>
         </div>
 
@@ -195,7 +197,7 @@ export function PullRequestsView() {
       </div>
 
       {/* Pull requests list */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto pb-20">
         {isLoading ? (
           <div className="p-6 text-center">
             <p className="text-muted-foreground">Loading pull requests...</p>
@@ -224,6 +226,8 @@ export function PullRequestsView() {
                     key={`${pr.repository}-${pr.number}`}
                     pr={pr}
                     onCopyNumber={handleCopyNumber}
+                    onCreateWorktree={onCreateWorktree}
+                    onCreateFromBranch={onCreateFromBranch}
                   />
                 ))}
               </div>
@@ -231,6 +235,25 @@ export function PullRequestsView() {
           </div>
         )}
       </div>
+
+      {/* Floating rate limit banner */}
+      {rateLimited && (
+        <div className="fixed bottom-0 left-0 right-0 bg-yellow-50 dark:bg-yellow-900/20 border-t border-yellow-200 dark:border-yellow-800 px-4 py-3 z-10">
+          <div className="flex items-center space-x-3">
+            <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                Rate limited, showing cached results.
+              </p>
+              {cached && timestamp && (
+                <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                  Data cached at {new Date(timestamp).toLocaleTimeString()}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
