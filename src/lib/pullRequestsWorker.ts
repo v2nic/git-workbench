@@ -439,6 +439,7 @@ export class PullRequestsWorker {
           const config = await getConfig()
           const favorites = (config.repos || [])
             .filter(r => r.favorite)
+            .filter(r => r.sshUrl || r.httpsUrl) // Only include repos with URLs
             .map(r => r.fullName || r.repoName)
             .filter((v): v is string => Boolean(v))
 

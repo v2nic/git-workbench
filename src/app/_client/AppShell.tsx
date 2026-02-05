@@ -54,9 +54,12 @@ export function AppShell() {
   }, [mutateConfig])
 
   const handleJumpToWorktrees = useCallback((repoName: string) => {
+    console.log('Jumping to worktrees for repo:', repoName)
     setWorktreeFilterRepo(repoName)
     setActiveTab('worktrees')
-  }, [])
+    // Refresh worktrees to show the newly created worktree
+    mutateWorktrees()
+  }, [mutateWorktrees])
 
   const handleJumpToPullRequests = useCallback((repoName: string) => {
     jumpToRepoPullRequests(repoName)

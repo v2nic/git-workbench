@@ -26,7 +26,7 @@ export function CreateRepoModal({
   const [formData, setFormData] = useState(() => ({
     repoName: '',
     defaultBranch: 'main',
-    worktreeName: 'main',
+    worktreeName: '', // Will be set to repo name when repo name changes
     worktreeBranchName: 'main',
     favorite: false
   }))
@@ -44,6 +44,17 @@ export function CreateRepoModal({
       setRepoNameModified(false)
     }
   }, [isOpen])
+
+  // Auto-set worktree name to repo name (or default repo name)
+  React.useEffect(() => {
+    const repoNameToUse = formData.repoName.trim() || defaultRepoName?.trim() || ''
+    if (repoNameToUse && !formData.worktreeName.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        worktreeName: repoNameToUse
+      }))
+    }
+  }, [formData.repoName, defaultRepoName, formData.worktreeName])
 
   // Derived state instead of effect - form validation
   const isValidForm = useMemo(() => {
@@ -117,7 +128,7 @@ export function CreateRepoModal({
       setFormData(() => ({
         repoName: '',
         defaultBranch: 'main',
-        worktreeName: 'main',
+        worktreeName: '', // Reset to empty, will be auto-set when modal opens again
         worktreeBranchName: 'main',
         favorite: false
       }))
@@ -166,7 +177,7 @@ export function CreateRepoModal({
         setFormData(() => ({
           repoName: '',
           defaultBranch: 'main',
-          worktreeName: 'main',
+          worktreeName: '', // Reset to empty, will be auto-set when modal opens again
           worktreeBranchName: 'main',
           favorite: false
         }))
@@ -223,7 +234,6 @@ export function CreateRepoModal({
               onChange={(e) => updateRepoName(e.target.value)}
               placeholder={defaultRepoName || ''}
               disabled={isCreating}
-              required
               autoFocus
             />
             <p className="text-xs text-muted-foreground mt-1">

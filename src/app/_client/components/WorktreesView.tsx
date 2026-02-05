@@ -24,6 +24,9 @@ export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo
   const { repos } = useRepos()
   const { pullRequests } = usePullRequests()
   
+  console.log('WorktreesView filterRepo:', filterRepo)
+  console.log('Available repos:', repos.map(r => ({ repoName: r.repoName, fullName: r.fullName })))
+  
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [pendingDeleteWorktree, setPendingDeleteWorktree] = useState<Worktree | null>(null)
   const [pendingDeleteStatus, setPendingDeleteStatus] = useState<WorktreeStatus | null>(null)
