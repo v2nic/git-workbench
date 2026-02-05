@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 
 export type Tab = 'repositories' | 'favorites' | 'worktrees' | 'pull-requests'
@@ -6,43 +6,29 @@ export type Tab = 'repositories' | 'favorites' | 'worktrees' | 'pull-requests'
 export function useAppNavigation() {
   const router = useRouter()
   const pathname = usePathname()
-  const [activeTab, setActiveTab] = useState<Tab>('favorites')
   const [searchQuery, setSearchQuery] = useState('')
-  const isInitialMount = useRef(true)
 
-  // Get tab from pathname
-  const getTabFromPathname = (path: string): Tab => {
-    if (path.includes('/repositories')) return 'repositories'
-    if (path.includes('/favorites')) return 'favorites'
-    if (path.includes('/worktrees')) return 'worktrees'
-    if (path.includes('/pull-requests')) return 'pull-requests'
+  // Derive activeTab from pathname - single source of truth
+  // Always returns 'favorites' for SSR consistency, then updates on client
+  const activeTab = useMemo((): Tab => {
+    if (pathname.includes('/repositories')) return 'repositories'
+    if (pathname.includes('/worktrees')) return 'worktrees'
+    if (pathname.includes('/pull-requests')) return 'pull-requests'
+    // Default to favorites for both SSR and any unknown paths
     return 'favorites'
-  }
-
-  // Sync tab from pathname after mount (client-side only)
-  useEffect(() => {
-    if (typeof window !== 'undefined' && isInitialMount.current) {
-      const tab = getTabFromPathname(pathname)
-      setActiveTab(tab)
-      isInitialMount.current = false
-    }
   }, [pathname])
 
-  // Update URL when tab changes (but not on initial mount)
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !isInitialMount.current) {
-      router.push(`/${activeTab}`, { scroll: false })
-    }
-  }, [activeTab, router])
+  // Navigate to a tab by updating the URL
+  const setActiveTab = useCallback((tab: Tab) => {
+    router.push(`/${tab}`, { scroll: false })
+  }, [router])
 
   const jumpToRepo = useCallback((repoName: string) => {
-    setActiveTab('worktrees')
     setSearchQuery('')
     router.push('/worktrees', { scroll: false })
   }, [router])
 
   const jumpToWorktrees = useCallback(() => {
-    setActiveTab('worktrees')
     router.push('/worktrees', { scroll: false })
   }, [router])
 
