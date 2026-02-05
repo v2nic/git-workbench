@@ -70,9 +70,22 @@ export async function POST(request: NextRequest) {
       console.warn(`Failed to create worktree directory: ${error}`)
     }
 
-    // Create the worktree with a new branch from the starting point
-    // -b creates a new branch named after the worktree, starting from targetRef
-    await execCommand(`git --git-dir "${gitDir}" worktree add -b "${worktreeName}" "${worktreePath}" "${targetRef}"`)
+    // Check if the branch already exists
+    let branchExists = false
+    try {
+      await execCommand(`git --git-dir "${gitDir}" rev-parse --verify "refs/heads/${worktreeName}"`)
+      branchExists = true
+    } catch {
+      // Branch doesn't exist
+    }
+
+    if (branchExists) {
+      // Branch exists, check it out in the new worktree
+      await execCommand(`git --git-dir "${gitDir}" worktree add "${worktreePath}" "${worktreeName}"`)
+    } else {
+      // Branch doesn't exist, create it from the starting point
+      await execCommand(`git --git-dir "${gitDir}" worktree add -b "${worktreeName}" "${worktreePath}" "${targetRef}"`)
+    }
 
     return NextResponse.json({ 
       message: 'Worktree created successfully',
