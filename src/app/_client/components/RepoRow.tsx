@@ -1,7 +1,7 @@
 import React, { memo, useCallback, useState, useEffect, useRef } from 'react'
 import { Repo } from '@/types/repos'
 import { Button } from './ui/Button'
-import { Star, GitBranchPlus, GitBranch, Download, MoreHorizontal, Trash2 } from 'lucide-react'
+import { Star, GitBranchPlus, GitBranch, Download, MoreHorizontal, Trash2, GitPullRequest } from 'lucide-react'
 import clsx from 'clsx'
 
 interface RepoRowProps {
@@ -11,6 +11,7 @@ interface RepoRowProps {
   onCreateWorktree: (repoName: string) => void
   onCloneRepo?: (repoName: string) => void
   onDeleteRepo?: (repoName: string) => void
+  onJumpToPullRequests?: (repoName: string) => void
   needsClone?: boolean
 }
 
@@ -21,6 +22,7 @@ export const RepoRow = memo(function RepoRow({
   onCreateWorktree,
   onCloneRepo,
   onDeleteRepo,
+  onJumpToPullRequests,
   needsClone
 }: RepoRowProps) {
   const [showMenu, setShowMenu] = useState(false)
@@ -77,6 +79,12 @@ export const RepoRow = memo(function RepoRow({
     setShowDeleteDialog(true)
     setShowMenu(false)
   }, [])
+
+  const handleJumpToPullRequests = useCallback(() => {
+    if (onJumpToPullRequests) {
+      onJumpToPullRequests(repo.fullName || repo.repoName)
+    }
+  }, [repo.fullName, repo.repoName, onJumpToPullRequests])
 
   const handleRepoNameClick = useCallback(() => {
     if (repo.remoteUrls && repo.remoteUrls.length > 0) {
@@ -158,6 +166,15 @@ export const RepoRow = memo(function RepoRow({
           >
             <GitBranch className="w-4 h-4 mr-1" />
             Worktrees
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleJumpToPullRequests}
+          >
+            <GitPullRequest className="w-4 h-4 mr-1" />
+            Pull Requests
           </Button>
 
           <Button

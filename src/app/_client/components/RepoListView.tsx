@@ -13,6 +13,7 @@ interface RepoListViewProps {
   onCreateWorktree: (repoName: string) => void
   onCloneRepo?: (repoName: string) => void
   onDeleteRepo?: (repoName: string) => void
+  onJumpToPullRequests?: (repoName: string) => void
   onAddRepo?: () => void
   searchQuery: string
   onSearchChange: (query: string) => void
@@ -25,6 +26,7 @@ export function RepoListView({
   onCreateWorktree,
   onCloneRepo,
   onDeleteRepo,
+  onJumpToPullRequests,
   onAddRepo,
   searchQuery,
   onSearchChange
@@ -172,6 +174,7 @@ export function RepoListView({
                 onCreateWorktree={onCreateWorktree}
                 onCloneRepo={onCloneRepo}
                 onDeleteRepo={onDeleteRepo || handleDeleteRepo}
+                onJumpToPullRequests={onJumpToPullRequests}
                 needsClone={repo.needsClone}
               />
             ))}

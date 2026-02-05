@@ -17,9 +17,11 @@ interface PullRequestsViewProps {
   onError?: (message: string) => void
   highlightPRNumber?: number
   highlightPRRepository?: string
+  filterRepo?: string
+  onClearFilter?: () => void
 }
 
-export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSuccess, onError, highlightPRNumber, highlightPRRepository }: PullRequestsViewProps) {
+export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSuccess, onError, highlightPRNumber, highlightPRRepository, filterRepo, onClearFilter }: PullRequestsViewProps) {
   const { pullRequests, isLoading, error, cached, rateLimited, timestamp, retryInSeconds, errorMessage, updateAvailable, refreshPullRequests } = usePullRequests()
   const [searchQuery, setSearchQuery] = useState('')
   const [groupBy, setGroupBy] = useState<GroupBy>('repository')
@@ -52,6 +54,11 @@ export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSucce
   const filteredAndGroupedPRs = useMemo(() => {
     // First, filter to show only open PRs (not merged or closed)
     let filtered = pullRequests.filter(pr => pr.state === 'open' && !pr.merged)
+
+    // Apply repository filter if specified
+    if (filterRepo) {
+      filtered = filtered.filter(pr => pr.repository === filterRepo)
+    }
 
     // Apply status filter
     if (statusFilter === 'ready') {
@@ -110,7 +117,7 @@ export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSucce
       })
 
     return result
-  }, [pullRequests, searchQuery, groupBy, statusFilter])
+  }, [pullRequests, searchQuery, groupBy, statusFilter, filterRepo])
 
   const handleCopyNumber = useCallback((number: number) => {
     if (typeof window !== 'undefined' && navigator.clipboard) {
@@ -175,6 +182,25 @@ export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSucce
               </p>
               <p className="text-xs text-red-600 dark:text-red-400 mt-1">{errorMessage}</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Repository filter indicator */}
+      {filterRepo && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-blue-800 dark:text-blue-200">
+              Showing pull requests for: <strong>{filterRepo}</strong>
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClearFilter}
+              className="text-blue-700 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
+            >
+              Clear Filter
+            </Button>
           </div>
         </div>
       )}

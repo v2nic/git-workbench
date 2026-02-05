@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { TopTabs } from './components/TopTabs'
 import { RepoListView } from './components/RepoListView'
 import { WorktreesView } from './components/WorktreesView'
@@ -16,18 +17,21 @@ import { useToast } from './hooks/useToast'
 import { Worktree } from '@/types/worktrees'
 import { CreateRepoData } from '@/types/config'
 
-export default function AppShell() {
+export function AppShell() {
+  const searchParams = useSearchParams()
   const { 
     activeTab, 
     setActiveTab, 
     searchQuery, 
     setSearchQuery, 
-    jumpToRepo 
+    jumpToRepo,
+    jumpToRepoPullRequests
   } = useAppNavigation()
   
   const { config, mutate: mutateConfig } = useConfig()
-  const { toasts, success, error, removeToast } = useToast()
+  const { worktrees, mutate: mutateWorktrees } = useWorktrees()
   const { mutate: mutateRepos } = useRepos()
+  const { toasts, success, error, removeToast } = useToast()
 
   const [createWorktreeModalOpen, setCreateWorktreeModalOpen] = useState(false)
   const [createRepoModalOpen, setCreateRepoModalOpen] = useState(false)
@@ -37,6 +41,11 @@ export default function AppShell() {
   const [highlightPRNumber, setHighlightPRNumber] = useState<number | undefined>()
   const [highlightPRRepository, setHighlightPRRepository] = useState<string | undefined>()
 
+  // Get repository filter from URL parameter
+  const pullRequestFilterRepo = useMemo(() => {
+    return searchParams.get('repo') || undefined
+  }, [searchParams])
+
   const handleToggleFavorite = useCallback((repoName: string) => {
     mutateConfig()
   }, [mutateConfig])
@@ -45,6 +54,10 @@ export default function AppShell() {
     setWorktreeFilterRepo(repoName)
     setActiveTab('worktrees')
   }, [])
+
+  const handleJumpToPullRequests = useCallback((repoName: string) => {
+    jumpToRepoPullRequests(repoName)
+  }, [jumpToRepoPullRequests])
 
   const handleCreateWorktree = useCallback((repoName: string) => {
     setSelectedRepo(repoName)
@@ -63,6 +76,7 @@ export default function AppShell() {
     if (tab !== 'worktrees') {
       setWorktreeFilterRepo(undefined) // Clear filter when leaving worktrees tab
     }
+    // Pull request filter is now handled by URL parameters, no need to clear
   }, [])
 
   const handleNavigateToPR = useCallback((prNumber: number, prRepository: string) => {
@@ -74,6 +88,11 @@ export default function AppShell() {
   const handleClearWorktreeFilter = useCallback(() => {
     setWorktreeFilterRepo(undefined)
   }, [])
+
+  const handleClearPullRequestFilter = useCallback(() => {
+    // Navigate to pull requests without the repo parameter
+    setActiveTab('pull-requests')
+  }, [setActiveTab])
 
   const handleCreateWorktreeSubmit = useCallback(async (repoName: string, branchName: string, worktreeName: string, startPoint?: string) => {
     try {
@@ -184,6 +203,7 @@ export default function AppShell() {
             onCreateWorktree={handleCreateWorktree}
             onCloneRepo={handleCloneRepo}
             onAddRepo={handleCreateRepo}
+            onJumpToPullRequests={jumpToRepoPullRequests}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
           />
@@ -197,6 +217,7 @@ export default function AppShell() {
             onCreateWorktree={handleCreateWorktree}
             onCloneRepo={handleCloneRepo}
             onAddRepo={handleCreateRepo}
+            onJumpToPullRequests={jumpToRepoPullRequests}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
           />
@@ -222,6 +243,8 @@ export default function AppShell() {
             onError={error}
             highlightPRNumber={highlightPRNumber}
             highlightPRRepository={highlightPRRepository}
+            filterRepo={pullRequestFilterRepo}
+            onClearFilter={handleClearPullRequestFilter}
           />
         )}
       </main>
@@ -256,3 +279,5 @@ export default function AppShell() {
     </div>
   )
 }
+
+export default AppShell
