@@ -11,7 +11,8 @@ export function TopTabs({ activeTab, onTabChange }: TopTabsProps) {
   const tabs: Array<{ id: Tab; label: string }> = [
     { id: 'favorites', label: 'Favorites' },
     { id: 'repositories', label: 'Repositories' },
-    { id: 'worktrees', label: 'Worktrees' }
+    { id: 'worktrees', label: 'Worktrees' },
+    { id: 'pull-requests', label: 'Pull Requests' }
   ]
 
   return (

@@ -1,21 +1,31 @@
 import { useState, useCallback, useEffect } from 'react'
 
-export type Tab = 'repositories' | 'favorites' | 'worktrees'
+export type Tab = 'repositories' | 'favorites' | 'worktrees' | 'pull-requests'
 
 export function useAppNavigation() {
   // Initialize tab from URL fragment, default to 'favorites'
   const getInitialTab = (): Tab => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.slice(1)
-      if (hash === 'repositories' || hash === 'favorites' || hash === 'worktrees') {
+      if (hash === 'repositories' || hash === 'favorites' || hash === 'worktrees' || hash === 'pull-requests') {
         return hash as Tab
       }
     }
     return 'favorites' // Default to favorites
   }
 
-  const [activeTab, setActiveTab] = useState<Tab>(getInitialTab)
+  const [activeTab, setActiveTab] = useState<Tab>('favorites')
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Sync initial tab from URL after mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.slice(1)
+      if (hash === 'repositories' || hash === 'favorites' || hash === 'worktrees' || hash === 'pull-requests') {
+        setActiveTab(hash as Tab)
+      }
+    }
+  }, [])
 
   // Update URL fragment when tab changes
   useEffect(() => {
@@ -29,7 +39,7 @@ export function useAppNavigation() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.slice(1)
-      if (hash === 'repositories' || hash === 'favorites' || hash === 'worktrees') {
+      if (hash === 'repositories' || hash === 'favorites' || hash === 'worktrees' || hash === 'pull-requests') {
         setActiveTab(hash as Tab)
       } else if (!hash) {
         setActiveTab('favorites')

@@ -4,6 +4,7 @@ import React, { useState, useCallback } from 'react'
 import { TopTabs } from './components/TopTabs'
 import { RepoListView } from './components/RepoListView'
 import { WorktreesView } from './components/WorktreesView'
+import { PullRequestsView } from './components/PullRequestsView'
 import { CreateWorktreeModal } from './components/CreateWorktreeModal'
 import { ToastContainer } from './components/ui/ToastContainer'
 import { useAppNavigation } from './state/useAppNavigation'
@@ -52,7 +53,7 @@ export default function AppShell() {
     setCreateWorktreeModalOpen(true)
   }, [])
 
-  const handleTabChange = useCallback((tab: 'repositories' | 'favorites' | 'worktrees') => {
+  const handleTabChange = useCallback((tab: 'repositories' | 'favorites' | 'worktrees' | 'pull-requests') => {
     setActiveTab(tab)
     if (tab !== 'worktrees') {
       setWorktreeFilterRepo(undefined) // Clear filter when leaving worktrees tab
@@ -165,6 +166,10 @@ export default function AppShell() {
             onSuccess={success}
             onError={error}
           />
+        )}
+
+        {activeTab === 'pull-requests' && (
+          <PullRequestsView />
         )}
       </main>
 
