@@ -1,8 +1,9 @@
-import React, { useMemo, useCallback, useState } from 'react'
+import React, { useMemo, useState, useCallback } from 'react'
 import { useWorktrees } from '../data/useWorktrees'
 import { useRepos } from '../data/useRepos'
 import { usePullRequests } from '../data/usePullRequests'
 import { WorktreeRow } from './WorktreeRow'
+import { FilterBanner } from './FilterBanner'
 import { DeleteWorktreeModal } from './DeleteWorktreeModal'
 import { Button } from './ui/Button'
 import { GitBranchPlus } from 'lucide-react'
@@ -23,9 +24,6 @@ export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo
   const { worktrees, isLoading, error, mutate } = useWorktrees()
   const { repos } = useRepos()
   const { pullRequests } = usePullRequests()
-  
-  console.log('WorktreesView filterRepo:', filterRepo)
-  console.log('Available repos:', repos.map(r => ({ repoName: r.repoName, fullName: r.fullName })))
   
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [pendingDeleteWorktree, setPendingDeleteWorktree] = useState<Worktree | null>(null)
@@ -155,22 +153,11 @@ export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo
 
   return (
     <div className="h-full flex flex-col">
-      {filterRepo && (
-        <div className="p-4 border-b bg-muted/30">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">
-              Showing worktrees for: <strong>{filterRepo}</strong>
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClearFilter}
-            >
-              Clear Filter
-            </Button>
-          </div>
-        </div>
-      )}
+      <FilterBanner
+        filterValue={filterRepo}
+        filterType="worktrees"
+        onClearFilter={onClearFilter}
+      />
       
       <div className="flex-1 overflow-auto">
         {isLoading ? (

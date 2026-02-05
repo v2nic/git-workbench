@@ -27,6 +27,7 @@ export function AppShell() {
     searchQuery, 
     setSearchQuery, 
     jumpToRepo,
+    jumpToWorktreesForRepo,
     jumpToRepoPullRequests
   } = useAppNavigation()
   
@@ -40,26 +41,28 @@ export function AppShell() {
   const [cloneRepoModalOpen, setCloneRepoModalOpen] = useState(false)
   const [selectedRepo, setSelectedRepo] = useState('')
   const [fromBranch, setFromBranch] = useState<string | undefined>()
-  const [worktreeFilterRepo, setWorktreeFilterRepo] = useState<string | undefined>()
   const [highlightPRNumber, setHighlightPRNumber] = useState<number | undefined>()
   const [highlightPRRepository, setHighlightPRRepository] = useState<string | undefined>()
 
   // Get repository filter from URL parameter
-  const pullRequestFilterRepo = useMemo(() => {
+  const worktreeFilterRepo = useMemo(() => {
+    if (activeTab !== 'worktrees') return undefined
     return searchParams.get('repo') || undefined
-  }, [searchParams])
+  }, [searchParams, activeTab])
+
+  const pullRequestFilterRepo = useMemo(() => {
+    if (activeTab !== 'pull-requests') return undefined
+    return searchParams.get('repo') || undefined
+  }, [searchParams, activeTab])
 
   const handleToggleFavorite = useCallback((repoName: string) => {
     mutateConfig()
   }, [mutateConfig])
 
   const handleJumpToWorktrees = useCallback((repoName: string) => {
-    console.log('Jumping to worktrees for repo:', repoName)
-    setWorktreeFilterRepo(repoName)
-    setActiveTab('worktrees')
-    // Refresh worktrees to show the newly created worktree
+    jumpToWorktreesForRepo(repoName)
     mutateWorktrees()
-  }, [mutateWorktrees])
+  }, [jumpToWorktreesForRepo, mutateWorktrees])
 
   const handleJumpToPullRequests = useCallback((repoName: string) => {
     jumpToRepoPullRequests(repoName)
@@ -79,11 +82,7 @@ export function AppShell() {
 
   const handleTabChange = useCallback((tab: 'repositories' | 'favorites' | 'worktrees' | 'pull-requests') => {
     setActiveTab(tab)
-    if (tab !== 'worktrees') {
-      setWorktreeFilterRepo(undefined) // Clear filter when leaving worktrees tab
-    }
-    // Pull request filter is now handled by URL parameters, no need to clear
-  }, [])
+  }, [setActiveTab])
 
   const handleNavigateToPR = useCallback((prNumber: number, prRepository: string) => {
     setHighlightPRNumber(prNumber)
@@ -92,8 +91,8 @@ export function AppShell() {
   }, [])
 
   const handleClearWorktreeFilter = useCallback(() => {
-    setWorktreeFilterRepo(undefined)
-  }, [])
+    setActiveTab('worktrees')
+  }, [setActiveTab])
 
   const handleClearPullRequestFilter = useCallback(() => {
     // Navigate to pull requests without the repo parameter

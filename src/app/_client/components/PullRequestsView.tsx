@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { usePullRequests } from '../data/usePullRequests'
 import { PRRow } from './PRRow'
+import { FilterBanner } from './FilterBanner'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { GitPullRequest, CheckCircle, Users, AlertTriangle, XCircle, RefreshCw } from 'lucide-react'
@@ -187,23 +188,11 @@ export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSucce
       )}
 
       {/* Repository filter indicator */}
-      {filterRepo && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-blue-800 dark:text-blue-200">
-              Showing pull requests for: <strong>{filterRepo}</strong>
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClearFilter}
-              className="text-blue-700 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
-            >
-              Clear Filter
-            </Button>
-          </div>
-        </div>
-      )}
+      <FilterBanner
+        filterValue={filterRepo}
+        filterType="pull requests"
+        onClearFilter={onClearFilter}
+      />
 
       {/* Header with stats */}
       <div className="p-4 border-b bg-muted/30">
