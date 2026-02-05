@@ -10,6 +10,7 @@ interface CreateRepoModalProps {
   onSuccess?: (message: string) => void
   onError?: (message: string) => void
   onNavigateToWorktrees?: (repoName: string) => void
+  defaultRepoName?: string
 }
 
 export function CreateRepoModal({
@@ -18,7 +19,8 @@ export function CreateRepoModal({
   onCreateRepo,
   onSuccess,
   onError,
-  onNavigateToWorktrees
+  onNavigateToWorktrees,
+  defaultRepoName
 }: CreateRepoModalProps) {
   // Lazy state initialization for expensive operations
   const [formData, setFormData] = useState(() => ({
@@ -33,18 +35,28 @@ export function CreateRepoModal({
   const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
 
+  // Track if user has modified the repo name
+  const [repoNameModified, setRepoNameModified] = useState(false)
+
+  // Reset modified state when modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      setRepoNameModified(false)
+    }
+  }, [isOpen])
+
   // Derived state instead of effect - form validation
   const isValidForm = useMemo(() => {
-    const cleanRepoName = formData.repoName.trim()
+    const cleanRepoName = formData.repoName.trim() || defaultRepoName?.trim() || ''
     return cleanRepoName !== '' && 
            /^[a-zA-Z0-9_-]+$/.test(cleanRepoName) &&
            formData.worktreeName.trim() !== '' &&
            formData.worktreeBranchName.trim() !== ''
-  }, [formData.repoName, formData.worktreeName, formData.worktreeBranchName])
+  }, [formData.repoName, formData.worktreeName, formData.worktreeBranchName, defaultRepoName])
 
   // Derived state - calculate paths
   const paths = useMemo(() => {
-    const cleanRepoName = formData.repoName.trim()
+    const cleanRepoName = formData.repoName.trim() || defaultRepoName?.trim() || ''
     const cleanWorktreeName = formData.worktreeName.trim()
     
     if (!cleanRepoName) {
@@ -56,9 +68,9 @@ export function CreateRepoModal({
     
     return {
       barePath: `~/Source/git-root/${cleanRepoName}.git`,
-      worktreeFullPath: `~/Source/${cleanWorktreeName}`
+      worktreeFullPath: `~/Source/${cleanRepoName}/${cleanWorktreeName}`
     }
-  }, [formData.repoName, formData.worktreeName])
+  }, [formData.repoName, formData.worktreeName, defaultRepoName])
 
   // Derived state - worktree name is always 'main'
   const worktreeNameMatchesRepo = useMemo(() => {
@@ -67,6 +79,7 @@ export function CreateRepoModal({
 
   // Functional setState updates to prevent stale closures
   const updateRepoName = useCallback((name: string) => {
+    setRepoNameModified(true)
     setFormData(prev => ({
       ...prev,
       repoName: name
@@ -130,7 +143,7 @@ export function CreateRepoModal({
     
     if (!isValidForm) return
 
-    const cleanRepoName = formData.repoName.trim()
+    const cleanRepoName = formData.repoName.trim() || defaultRepoName?.trim() || ''
     const submitData: CreateRepoData = {
       repoName: cleanRepoName,
       defaultBranch: formData.defaultBranch,
@@ -208,7 +221,7 @@ export function CreateRepoModal({
               type="text"
               value={formData.repoName}
               onChange={(e) => updateRepoName(e.target.value)}
-              placeholder="my-awesome-repo"
+              placeholder={defaultRepoName || ''}
               disabled={isCreating}
               required
               autoFocus
@@ -220,14 +233,22 @@ export function CreateRepoModal({
 
           {/* Path Display */}
           {paths.barePath && (
-            <div className="bg-muted/30 rounded-md p-3 space-y-1">
-              <div className="flex justify-between text-sm">
-                <span className="font-medium">Bare Repository:</span>
-                <span className="font-mono text-xs">{paths.barePath}</span>
+            <div className="bg-muted/30 rounded-md p-3 space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Bare Repository
+                </label>
+                <div className="font-mono text-xs bg-background rounded p-2">
+                  {paths.barePath}
+                </div>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="font-medium">Worktree Path:</span>
-                <span className="font-mono text-xs">{paths.worktreeFullPath}</span>
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Worktree Path
+                </label>
+                <div className="font-mono text-xs bg-background rounded p-2">
+                  {paths.worktreeFullPath}
+                </div>
               </div>
             </div>
           )}

@@ -17,6 +17,7 @@ import { useRepos } from './data/useRepos'
 import { useToast } from './hooks/useToast'
 import { Worktree } from '@/types/worktrees'
 import { CreateRepoData } from '@/types/config'
+import { generateSlug } from 'random-word-slugs'
 
 export function AppShell() {
   const searchParams = useSearchParams()
@@ -128,6 +129,12 @@ export function AppShell() {
 
   const handleCreateRepo = useCallback(() => {
     setCreateRepoModalOpen(true)
+  }, [])
+
+  const generateDefaultRepoName = useCallback(() => {
+    // Generate cute random word combinations like "happy-purple-dragon"
+    const slug = generateSlug(2) // Generate 2 words for shorter names
+    return slug.replace(/-/g, '-') // Keep the kebab case
   }, [])
 
   const handleCloneRepo = useCallback(() => {
@@ -244,6 +251,7 @@ export function AppShell() {
         onSuccess={success}
         onError={error}
         onNavigateToWorktrees={handleJumpToWorktrees}
+        defaultRepoName={createRepoModalOpen ? generateDefaultRepoName() : undefined}
       />
 
       {/* Clone Repo Modal */}
