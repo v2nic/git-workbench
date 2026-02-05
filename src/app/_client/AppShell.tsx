@@ -134,6 +134,17 @@ export function AppShell() {
     setCloneRepoModalOpen(true)
   }, [])
 
+  const handlePublishRepo = useCallback(async (repoName: string) => {
+    try {
+      // Refresh repos list to show updated SSH URL
+      await mutateRepos()
+      success(`Repository '${repoName}' published successfully!`)
+    } catch (err) {
+      console.error('Failed to refresh repositories after publish:', err)
+      error('Repository was published but failed to refresh the list')
+    }
+  }, [mutateRepos, success, error])
+
   const handleCreateRepoSubmit = useCallback(async (repoData: CreateRepoData) => {
     try {
       const response = await fetch('/api/repos/create', {
@@ -178,6 +189,7 @@ export function AppShell() {
             onCloneRepo={handleCloneRepo}
             onAddRepo={handleCreateRepo}
             onJumpToPullRequests={jumpToRepoPullRequests}
+            onPublishRepo={handlePublishRepo}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
           />
@@ -192,6 +204,7 @@ export function AppShell() {
             onCloneRepo={handleCloneRepo}
             onAddRepo={handleCreateRepo}
             onJumpToPullRequests={jumpToRepoPullRequests}
+            onPublishRepo={handlePublishRepo}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
           />

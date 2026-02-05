@@ -4,6 +4,8 @@ export interface Repo {
   favorite?: boolean
   barePath: string
   remoteUrls?: string[]
+  sshUrl?: string
+  httpsUrl?: string
   tracked: boolean
   needsClone?: boolean
 }

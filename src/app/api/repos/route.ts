@@ -40,9 +40,11 @@ export async function GET() {
         const urls: string[] = []
         if (repoConfig.httpsUrl) {
           urls.push(repoConfig.httpsUrl)
+          repo.httpsUrl = repoConfig.httpsUrl
         }
         if (repoConfig.sshUrl) {
           urls.push(repoConfig.sshUrl)
+          repo.sshUrl = repoConfig.sshUrl
           // Also add the HTTPS version of the SSH URL for cloning
           const httpsFromSsh = repoConfig.sshUrl.replace('git@github.com:', 'https://github.com/')
           if (!repoConfig.httpsUrl && !urls.includes(httpsFromSsh)) {
@@ -72,9 +74,21 @@ export async function GET() {
 
           // Try to get remote URLs
           let remoteUrls: string[] = []
+          let sshUrl: string | undefined
+          let httpsUrl: string | undefined
           try {
             const { stdout } = await execCommand('git remote get-url origin', barePath)
-            remoteUrls = [stdout.trim()]
+            const url = stdout.trim()
+            remoteUrls = [url]
+            
+            // Set sshUrl and httpsUrl based on the remote URL
+            if (url.startsWith('git@github.com:')) {
+              sshUrl = url
+              httpsUrl = url.replace('git@github.com:', 'https://github.com/')
+            } else if (url.startsWith('https://github.com/')) {
+              httpsUrl = url
+              sshUrl = url.replace('https://github.com/', 'git@github.com:').replace(/\/$/, '') + '.git'
+            }
           } catch {
             // No remote, that's fine for local repos
           }
@@ -83,6 +97,8 @@ export async function GET() {
             repoName,
             barePath,
             remoteUrls,
+            sshUrl,
+            httpsUrl,
             tracked: false
           })
         }

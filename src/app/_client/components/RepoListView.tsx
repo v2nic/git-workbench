@@ -15,6 +15,7 @@ interface RepoListViewProps {
   onDeleteRepo?: (repoName: string) => void
   onJumpToPullRequests?: (repoName: string) => void
   onAddRepo?: () => void
+  onPublishRepo?: (repoName: string) => void
   searchQuery: string
   onSearchChange: (query: string) => void
 }
@@ -28,6 +29,7 @@ export function RepoListView({
   onDeleteRepo,
   onJumpToPullRequests,
   onAddRepo,
+  onPublishRepo,
   searchQuery,
   onSearchChange
 }: RepoListViewProps) {
@@ -181,6 +183,7 @@ export function RepoListView({
                 onCreateWorktree={onCreateWorktree}
                 onDeleteRepo={onDeleteRepo || handleDeleteRepo}
                 onJumpToPullRequests={onJumpToPullRequests}
+                onPublishRepo={onPublishRepo}
                 needsClone={repo.needsClone}
               />
             ))}

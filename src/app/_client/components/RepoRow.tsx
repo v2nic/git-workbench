@@ -1,7 +1,8 @@
 import React, { memo, useCallback, useState, useEffect, useRef } from 'react'
 import { Repo } from '@/types/repos'
 import { Button } from './ui/Button'
-import { Star, GitBranchPlus, GitBranch, Download, MoreHorizontal, Trash2, GitPullRequest } from 'lucide-react'
+import { Star, GitBranchPlus, GitBranch, Download, MoreHorizontal, Trash2, GitPullRequest, Upload } from 'lucide-react'
+import { PublishRepoModal } from './PublishRepoModal'
 import clsx from 'clsx'
 
 interface RepoRowProps {
@@ -12,6 +13,7 @@ interface RepoRowProps {
   onCloneRepo?: (repoName: string) => void
   onDeleteRepo?: (repoName: string) => void
   onJumpToPullRequests?: (repoName: string) => void
+  onPublishRepo?: (repoName: string) => void
   needsClone?: boolean
 }
 
@@ -23,10 +25,12 @@ export const RepoRow = memo(function RepoRow({
   onCloneRepo,
   onDeleteRepo,
   onJumpToPullRequests,
+  onPublishRepo,
   needsClone
 }: RepoRowProps) {
   const [showMenu, setShowMenu] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showPublishModal, setShowPublishModal] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   // Close menu when clicking outside
@@ -85,6 +89,21 @@ export const RepoRow = memo(function RepoRow({
       onJumpToPullRequests(repo.fullName || repo.repoName)
     }
   }, [repo.fullName, repo.repoName, onJumpToPullRequests])
+
+  const handlePublishRepo = useCallback(() => {
+    setShowPublishModal(true)
+  }, [])
+
+  const handlePublishSuccess = useCallback((sshUrl: string) => {
+    setShowPublishModal(false)
+    if (onPublishRepo) {
+      onPublishRepo(repo.repoName)
+    }
+  }, [repo.repoName, onPublishRepo])
+
+  const handleClosePublishModal = useCallback(() => {
+    setShowPublishModal(false)
+  }, [])
 
   const handleRepoNameClick = useCallback(() => {
     if (repo.remoteUrls && repo.remoteUrls.length > 0) {
@@ -156,6 +175,19 @@ export const RepoRow = memo(function RepoRow({
             >
               <Download className="w-4 h-4 mr-1" />
               Clone
+            </Button>
+          )}
+
+          {/* Show Publish button if repo is local (no SSH URL) */}
+          {!repo.sshUrl && !repo.httpsUrl && onPublishRepo && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handlePublishRepo}
+              title="Publish repository to GitHub"
+            >
+              <Upload className="w-4 h-4 mr-1" />
+              Publish
             </Button>
           )}
 
@@ -241,6 +273,19 @@ export const RepoRow = memo(function RepoRow({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Publish Modal */}
+      {showPublishModal && (
+        <PublishRepoModal
+          repo={{
+            repoName: repo.repoName,
+            fullName: repo.fullName,
+            barePath: repo.barePath
+          }}
+          onClose={handleClosePublishModal}
+          onSuccess={handlePublishSuccess}
+        />
       )}
     </div>
   )
