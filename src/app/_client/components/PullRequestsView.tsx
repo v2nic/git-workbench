@@ -27,7 +27,7 @@ export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSucce
   const { pullRequests, isLoading, error, cached, rateLimited, timestamp, retryInSeconds, errorMessage, updateAvailable, refreshPullRequests } = usePullRequests()
   const [searchQuery, setSearchQuery] = useState('')
   const [groupBy, setGroupBy] = useState<GroupBy>('repository')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ready')
   const [animatingPRKey, setAnimatingPRKey] = useState<string | null>(null)
   const prRowRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
