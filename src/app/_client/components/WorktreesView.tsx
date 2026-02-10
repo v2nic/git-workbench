@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react'
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useWorktrees } from '../data/useWorktrees'
 import { useRepos } from '../data/useRepos'
 import { usePullRequests } from '../data/usePullRequests'
@@ -34,6 +34,9 @@ export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo
   const [isDeleting, setIsDeleting] = useState(false)
   const [stateMismatchOpen, setStateMismatchOpen] = useState(false)
   const [mismatches, setMismatches] = useState<any[]>([])
+  
+  // Refs for scrolling to highlighted worktree
+  const worktreeRowRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
   // Clear highlight after animation
   useEffect(() => {
@@ -44,6 +47,18 @@ export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo
       return () => clearTimeout(timer)
     }
   }, [highlightWorktreePath, onClearHighlight])
+
+  // Scroll to highlighted worktree
+  useEffect(() => {
+    if (highlightWorktreePath) {
+      const worktreeElement = worktreeRowRefs.current.get(highlightWorktreePath)
+      if (worktreeElement) {
+        setTimeout(() => {
+          worktreeElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }, 100)
+      }
+    }
+  }, [highlightWorktreePath])
 
   // Group worktrees by repository and include all repos
   const worktreesByRepo = useMemo(() => {
@@ -283,17 +298,28 @@ export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo
                       </div>
                     ) : (
                       <div>
-                        {repoWorktrees.map((worktree) => (
-                          <WorktreeRow
-                            key={worktree.path}
-                            worktree={worktree}
-                            onDeleteWorktree={handleDeleteWorktree}
-                            onCreateFromBranch={onCreateFromBranch}
-                            allPullRequests={pullRequests}
-                            onNavigateToPR={onNavigateToPR}
-                            isHighlighted={highlightWorktreePath === worktree.path}
-                          />
-                        ))}
+                        {repoWorktrees.map((worktree) => {
+                          const setRef = (element: HTMLDivElement | null) => {
+                            if (element) {
+                              worktreeRowRefs.current.set(worktree.path, element)
+                            } else {
+                              worktreeRowRefs.current.delete(worktree.path)
+                            }
+                          }
+                          
+                          return (
+                            <WorktreeRow
+                              key={worktree.path}
+                              ref={setRef}
+                              worktree={worktree}
+                              onDeleteWorktree={handleDeleteWorktree}
+                              onCreateFromBranch={onCreateFromBranch}
+                              allPullRequests={pullRequests}
+                              onNavigateToPR={onNavigateToPR}
+                              isHighlighted={highlightWorktreePath === worktree.path}
+                            />
+                          )
+                        })}
                       </div>
                     )}
                   </div>

@@ -71,9 +71,13 @@ export function AppShell() {
     mutateConfig()
   }, [mutateConfig])
 
-  const handleJumpToWorktrees = useCallback((repoName: string) => {
+  const handleJumpToWorktrees = useCallback((repoName: string, worktreePath?: string) => {
     jumpToWorktreesForRepo(repoName)
     mutateWorktrees()
+    // Set highlight for the newly created worktree if path is provided
+    if (worktreePath) {
+      setHighlightWorktreePath(worktreePath)
+    }
   }, [jumpToWorktreesForRepo, mutateWorktrees])
 
   const handleJumpToPullRequests = useCallback((repoName: string) => {
@@ -142,21 +146,17 @@ export function AppShell() {
       }
 
       const result = await response.json()
-      console.log('Worktree created successfully:', result)
       
       success(`Worktree '${worktreeName}' created successfully!`)
       setCreateWorktreeModalOpen(false)
       
-      // Set highlight for the newly created worktree and navigate to worktrees view
-      if (result.path) {
-        setHighlightWorktreePath(result.path)
-        setActiveTab('worktrees')
-      }
+      // Return the result for the caller to handle navigation/highlighting
+      return result
     } catch (err) {
       console.error('Failed to create worktree:', err)
       throw err
     }
-  }, [success, setActiveTab])
+  }, [success])
 
   const handleCreateRepo = useCallback(() => {
     setCreateRepoModalOpen(true)

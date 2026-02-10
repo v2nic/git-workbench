@@ -8,10 +8,10 @@ interface CreateWorktreeModalProps {
   onClose: () => void
   repoName: string
   fromBranch?: string
-  onCreateWorktree: (repoName: string, branchName: string, worktreeName: string, startPoint?: string) => void
+  onCreateWorktree: (repoName: string, branchName: string, worktreeName: string, startPoint?: string) => Promise<any>
   onSuccess?: (message: string) => void
   onError?: (message: string) => void
-  onNavigateToWorktrees?: (repoName: string) => void
+  onNavigateToWorktrees?: (repoName: string, worktreePath?: string) => void
 }
 
 export function CreateWorktreeModal({
@@ -107,14 +107,14 @@ export function CreateWorktreeModal({
     setIsCreating(true)
     setError('')
     try {
-      await onCreateWorktree(repoName, finalBranchName, worktreeName.trim(), finalStartPoint)
+      const result = await onCreateWorktree(repoName, finalBranchName, worktreeName.trim(), finalStartPoint)
       // Success/error handling is done in the parent component
       onClose()
       setWorktreeName('')
       setBranchName('')
-      // Navigate to worktrees tab filtered by this repo
+      // Navigate to worktrees tab filtered by this repo, passing the created worktree path for highlighting
       if (onNavigateToWorktrees) {
-        onNavigateToWorktrees(repoName)
+        onNavigateToWorktrees(repoName, result?.path)
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'

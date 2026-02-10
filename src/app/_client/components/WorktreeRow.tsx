@@ -1,7 +1,8 @@
-import React, { memo, useCallback } from 'react'
+import React, { memo, useCallback, forwardRef } from 'react'
 import { Worktree } from '@/types/worktrees'
 import { usePullRequest } from '../data/usePullRequest'
 import { Button } from './ui/Button'
+import { DropdownMenu, DropdownMenuItem } from './ui/DropdownMenu'
 import { ExternalLink, Copy, GitBranch, MoreVertical, FolderOpen, GitPullRequest } from 'lucide-react'
 import { PRNotification } from '@/types/github'
 import clsx from 'clsx'
@@ -15,14 +16,14 @@ interface WorktreeRowProps {
   isHighlighted?: boolean
 }
 
-export const WorktreeRow = memo(function WorktreeRow({
+export const WorktreeRow = memo(forwardRef(function WorktreeRow({
   worktree,
   onDeleteWorktree,
   onCreateFromBranch,
   allPullRequests = [],
   onNavigateToPR,
   isHighlighted = false
-}: WorktreeRowProps) {
+}: WorktreeRowProps, ref: React.Ref<HTMLDivElement>) {
   const { pullRequests } = usePullRequest(worktree.repoFullName || '', worktree.branch)
   
   const matchingPR = allPullRequests.find(pr => 
@@ -83,7 +84,7 @@ export const WorktreeRow = memo(function WorktreeRow({
   )
 
   return (
-    <div className={clsx(
+    <div ref={ref} className={clsx(
       'border-b p-4 hover:bg-muted/50 transition-colors',
       isHighlighted && 'bg-blue-50 dark:bg-blue-900/20 animate-pulse'
     )}>
@@ -199,22 +200,26 @@ export const WorktreeRow = memo(function WorktreeRow({
           </Button>
           
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
             onClick={handleCreateFromBranch}
           >
             Create from this branch
           </Button>
           
-          <Button
-            variant={isDirty ? 'destructive' : 'secondary'}
-            size="sm"
-            onClick={handleDeleteWorktree}
+          <DropdownMenu
+            trigger={
+              <Button variant="ghost" size="sm">
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            }
           >
-            Delete
-          </Button>
+            <DropdownMenuItem onClick={handleDeleteWorktree}>
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenu>
         </div>
       </div>
     </div>
   )
-})
+}))
