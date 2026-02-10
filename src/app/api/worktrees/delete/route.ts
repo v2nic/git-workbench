@@ -2,13 +2,91 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getConfig } from '@/lib/config'
 import { execCommand, expandPath } from '@/lib/git'
 import { getWorktreeStatus } from '@/lib/worktree'
-import { DeleteWorktreeRequest } from '@/types/worktrees'
+import { DeleteWorktreeRequest, WorktreeStatus } from '@/types/worktrees'
+
+// Compare expected status with actual status
+function compareStatus(expected: WorktreeStatus, actual: WorktreeStatus): {
+  isValid: boolean
+  mismatches: Array<{
+    type: 'staged' | 'modified' | 'untracked'
+    expected: number
+    actual: number
+    hashMismatch?: boolean
+    newFiles?: string[]
+  }>
+} {
+  const mismatches: Array<{
+    type: 'staged' | 'modified' | 'untracked'
+    expected: number
+    actual: number
+    hashMismatch?: boolean
+    newFiles?: string[]
+  }> = []
+
+  // Check staged files
+  if (expected.staged !== actual.staged) {
+    mismatches.push({
+      type: 'staged',
+      expected: expected.staged,
+      actual: actual.staged
+    })
+  } else if (expected.stagedHash && actual.stagedHash && expected.stagedHash !== actual.stagedHash) {
+    mismatches.push({
+      type: 'staged',
+      expected: expected.staged,
+      actual: actual.staged,
+      hashMismatch: true
+    })
+  }
+
+  // Check modified files
+  if (expected.modified !== actual.modified) {
+    mismatches.push({
+      type: 'modified',
+      expected: expected.modified,
+      actual: actual.modified
+    })
+  } else if (expected.modifiedHash && actual.modifiedHash && expected.modifiedHash !== actual.modifiedHash) {
+    mismatches.push({
+      type: 'modified',
+      expected: expected.modified,
+      actual: actual.modified,
+      hashMismatch: true
+    })
+  }
+
+  // Check untracked files
+  if (expected.untracked !== actual.untracked) {
+    const newFiles = actual.untrackedFiles && expected.untrackedFiles
+      ? actual.untrackedFiles.filter(f => !expected.untrackedFiles!.includes(f))
+      : []
+    
+    mismatches.push({
+      type: 'untracked',
+      expected: expected.untracked,
+      actual: actual.untracked,
+      newFiles
+    })
+  } else if (expected.untrackedHash && actual.untrackedHash && expected.untrackedHash !== actual.untrackedHash) {
+    mismatches.push({
+      type: 'untracked',
+      expected: expected.untracked,
+      actual: actual.untracked,
+      hashMismatch: true
+    })
+  }
+
+  return {
+    isValid: mismatches.length === 0,
+    mismatches
+  }
+}
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    const { repo, worktreePath, force }: DeleteWorktreeRequest & { force?: boolean } = await request.json()
+    const { repo, worktreePath, force, expectedStatus }: DeleteWorktreeRequest = await request.json()
 
     if (!repo || !worktreePath) {
       return NextResponse.json(
@@ -37,6 +115,20 @@ export async function POST(request: NextRequest) {
     // Get worktree status to check if it's clean
     const status = await getWorktreeStatus(worktreePath)
     const isClean = status.staged === 0 && status.modified === 0 && status.untracked === 0 && status.outgoing === 0
+
+    // Validate expected status if provided
+    if (expectedStatus && !force) {
+      const validation = compareStatus(expectedStatus, status)
+      if (!validation.isValid) {
+        return NextResponse.json({
+          error: 'Worktree state has changed since you viewed it',
+          expectedStatus,
+          actualStatus: status,
+          mismatches: validation.mismatches,
+          requiresConfirmation: true
+        }, { status: 409 })
+      }
+    }
 
     if (!isClean && !force) {
       return NextResponse.json({

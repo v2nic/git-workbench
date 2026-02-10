@@ -1,5 +1,13 @@
 import { execCommand, expandPath, pathRelativeToHome, execGitCommandSync } from './git'
 import { WorktreeStatus } from '@/types/worktrees'
+import * as crypto from 'crypto'
+
+// Helper function to compute SHA-256 hash of a file list
+function computeFileHash(files: string[]): string {
+  return crypto.createHash('sha256')
+    .update(files.sort().join('\n'))
+    .digest('hex')
+}
 
 export async function getWorktreeStatus(worktreePath: string): Promise<WorktreeStatus> {
   const status: WorktreeStatus = {
@@ -14,7 +22,9 @@ export async function getWorktreeStatus(worktreePath: string): Promise<WorktreeS
     // Staged files - use git command directly instead of shell pipe
     try {
       const { stdout: staged } = await execGitCommandSync(['diff', '--cached', '--name-only'], worktreePath)
-      status.staged = staged.trim() ? staged.trim().split('\n').length : 0
+      const stagedFiles = staged.trim() ? staged.trim().split('\n') : []
+      status.staged = stagedFiles.length
+      status.stagedHash = computeFileHash(stagedFiles)
     } catch (error) {
       // Silently fail and keep default value
     }
@@ -22,7 +32,9 @@ export async function getWorktreeStatus(worktreePath: string): Promise<WorktreeS
     // Modified files - use git command directly
     try {
       const { stdout: modified } = await execGitCommandSync(['diff', '--name-only'], worktreePath)
-      status.modified = modified.trim() ? modified.trim().split('\n').length : 0
+      const modifiedFiles = modified.trim() ? modified.trim().split('\n') : []
+      status.modified = modifiedFiles.length
+      status.modifiedHash = computeFileHash(modifiedFiles)
     } catch (error) {
       // Silently fail and keep default value
     }
@@ -30,7 +42,10 @@ export async function getWorktreeStatus(worktreePath: string): Promise<WorktreeS
     // Untracked files - use git command directly
     try {
       const { stdout: untracked } = await execGitCommandSync(['ls-files', '--others', '--exclude-standard'], worktreePath)
-      status.untracked = untracked.trim() ? untracked.trim().split('\n').length : 0
+      const untrackedFiles = untracked.trim() ? untracked.trim().split('\n') : []
+      status.untracked = untrackedFiles.length
+      status.untrackedHash = computeFileHash(untrackedFiles)
+      status.untrackedFiles = untrackedFiles
     } catch (error) {
       // Silently fail and keep default value
     }

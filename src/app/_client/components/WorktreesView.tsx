@@ -5,6 +5,7 @@ import { usePullRequests } from '../data/usePullRequests'
 import { WorktreeRow } from './WorktreeRow'
 import { FilterBanner } from './FilterBanner'
 import { DeleteWorktreeModal } from './DeleteWorktreeModal'
+import { StateMismatchModal } from './StateMismatchModal'
 import { Button } from './ui/Button'
 import { GitBranchPlus } from 'lucide-react'
 import { Worktree, WorktreeStatus } from '@/types/worktrees'
@@ -29,6 +30,8 @@ export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo
   const [pendingDeleteWorktree, setPendingDeleteWorktree] = useState<Worktree | null>(null)
   const [pendingDeleteStatus, setPendingDeleteStatus] = useState<WorktreeStatus | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [stateMismatchOpen, setStateMismatchOpen] = useState(false)
+  const [mismatches, setMismatches] = useState<any[]>([])
 
   // Group worktrees by repository and include all repos
   const worktreesByRepo = useMemo(() => {
@@ -86,16 +89,25 @@ export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           repo: worktree.repoFullName || worktree.repoName,
-          worktreePath: worktree.path
+          worktreePath: worktree.path,
+          expectedStatus: worktree.status
         })
       })
 
       if (!response.ok) {
         const error = await response.json()
         if (error.requiresConfirmation) {
-          setPendingDeleteWorktree(worktree)
-          setPendingDeleteStatus(error.status)
-          setDeleteModalOpen(true)
+          if (error.mismatches) {
+            // State mismatch - show detailed modal
+            setPendingDeleteWorktree(worktree)
+            setMismatches(error.mismatches)
+            setStateMismatchOpen(true)
+          } else {
+            // Regular dirty state confirmation
+            setPendingDeleteWorktree(worktree)
+            setPendingDeleteStatus(error.status)
+            setDeleteModalOpen(true)
+          }
           return
         } else {
           throw new Error(error.error)
@@ -110,6 +122,50 @@ export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo
     }
   }, [mutate, onSuccess, onError])
 
+  const handleRefreshStatus = useCallback(async () => {
+    if (!pendingDeleteWorktree) return
+    
+    // Re-fetch worktrees to get updated status
+    await mutate()
+    setStateMismatchOpen(false)
+    setMismatches([])
+    onSuccess?.('Worktree status refreshed')
+  }, [pendingDeleteWorktree, mutate, onSuccess])
+
+  const handleForceDeleteWithMismatch = useCallback(async () => {
+    if (!pendingDeleteWorktree) return
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch('/api/worktrees/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repo: pendingDeleteWorktree.repoFullName || pendingDeleteWorktree.repoName,
+          worktreePath: pendingDeleteWorktree.path,
+          force: true,
+          expectedStatus: pendingDeleteWorktree.status
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to delete worktree')
+      }
+
+      setStateMismatchOpen(false)
+      setPendingDeleteWorktree(null)
+      setMismatches([])
+      mutate()
+      onSuccess?.(`Worktree '${pendingDeleteWorktree.pathRelativeToHome}' deleted successfully`)
+    } catch (error) {
+      console.error('Failed to delete worktree:', error)
+      onError?.(`Failed to delete worktree: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsDeleting(false)
+    }
+  }, [pendingDeleteWorktree, mutate, onSuccess, onError])
+
   const handleConfirmDelete = useCallback(async () => {
     if (!pendingDeleteWorktree) return
 
@@ -121,13 +177,29 @@ export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo
         body: JSON.stringify({
           repo: pendingDeleteWorktree.repoFullName || pendingDeleteWorktree.repoName,
           worktreePath: pendingDeleteWorktree.path,
-          force: true
+          force: true,
+          expectedStatus: pendingDeleteWorktree.status
         })
       })
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Failed to delete worktree')
+        if (error.mismatches) {
+          // Even with force, show state mismatch warning
+          const mismatchDetails = error.mismatches.map((m: any) => {
+            if (m.type === 'untracked' && m.newFiles) {
+              return `${m.actual - m.expected} new untracked files: ${m.newFiles.join(', ')}`
+            } else if (m.hashMismatch) {
+              return `File list changed for ${m.type} files`
+            } else {
+              return `${m.type} files changed: ${m.expected} → ${m.actual}`
+            }
+          }).join(', ')
+          
+          onError?.(`Warning: Worktree state changed during deletion: ${mismatchDetails}. Proceeding anyway.`)
+        } else {
+          throw new Error(error.error || 'Failed to delete worktree')
+        }
       }
 
       setDeleteModalOpen(false)
@@ -229,6 +301,20 @@ export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo
         worktree={pendingDeleteWorktree}
         status={pendingDeleteStatus}
         onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+      />
+
+      <StateMismatchModal
+        isOpen={stateMismatchOpen}
+        onClose={() => {
+          setStateMismatchOpen(false)
+          setPendingDeleteWorktree(null)
+          setMismatches([])
+        }}
+        worktree={pendingDeleteWorktree}
+        mismatches={mismatches}
+        onRefresh={handleRefreshStatus}
+        onForceDelete={handleForceDeleteWithMismatch}
         isLoading={isDeleting}
       />
     </div>

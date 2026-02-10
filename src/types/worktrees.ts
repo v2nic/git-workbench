@@ -4,6 +4,11 @@ export interface WorktreeStatus {
   untracked: number
   incoming: number
   outgoing: number
+  // Hash fields for state validation
+  stagedHash?: string
+  modifiedHash?: string
+  untrackedHash?: string
+  untrackedFiles?: string[]
 }
 
 export interface Worktree {
@@ -37,4 +42,6 @@ export interface CreateFromMainRequest {
 export interface DeleteWorktreeRequest {
   repo: string
   worktreePath: string
+  expectedStatus?: WorktreeStatus
+  force?: boolean
 }
