@@ -10,6 +10,7 @@ import { StateMismatchModal } from './StateMismatchModal'
 import { Button } from './ui/Button'
 import { GitBranchPlus } from 'lucide-react'
 import { Worktree, WorktreeStatus } from '@/types/worktrees'
+import { getWorktreeName } from '../utils/worktreeUtils'
 import clsx from 'clsx'
 
 interface WorktreesViewProps {
@@ -37,13 +38,13 @@ export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo
   const [mismatches, setMismatches] = useState<any[]>([])
   
   const worktreeRowRefs = useRef<Map<string, HTMLElement>>(new Map())
-  const [highlightWorktreePath, setHighlightWorktreePath] = useState<string | undefined>()
+  const [highlightWorktreeName, setHighlightWorktreeName] = useState<string | undefined>()
   
   // Read worktree highlight from URL parameter
   useEffect(() => {
     const encoded = searchParams.get('worktree')
-    const worktreePath = encoded ? decodeURIComponent(encoded) : undefined
-    setHighlightWorktreePath(worktreePath)
+    const worktreeName = encoded ? decodeURIComponent(encoded) : undefined
+    setHighlightWorktreeName(worktreeName)
   }, [searchParams])
 
   // Clear highlight by updating URL without worktree parameter
@@ -52,20 +53,24 @@ export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo
     params.delete('worktree')
     const newUrl = params.toString() ? `/worktrees?${params.toString()}` : '/worktrees'
     router.push(newUrl, { scroll: false })
-    setHighlightWorktreePath(undefined)
+    setHighlightWorktreeName(undefined)
   }, [searchParams, router])
 
   // Scroll to highlighted worktree once it appears in the DOM (permanent highlight)
   useEffect(() => {
-    if (!highlightWorktreePath) return
+    if (!highlightWorktreeName) return
 
-    const worktreeElement = worktreeRowRefs.current.get(highlightWorktreePath)
+    // Find worktree by name instead of path
+    const targetWorktree = worktrees.find(worktree => getWorktreeName(worktree) === highlightWorktreeName)
+    if (!targetWorktree) return
+
+    const worktreeElement = worktreeRowRefs.current.get(targetWorktree.path)
     if (!worktreeElement) return
 
     setTimeout(() => {
       worktreeElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }, 100)
-  }, [highlightWorktreePath, worktrees])
+  }, [highlightWorktreeName, worktrees])
 
   // Group worktrees by repository and include all repos
   const worktreesByRepo = useMemo(() => {
@@ -323,7 +328,7 @@ export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo
                               onCreateFromBranch={onCreateFromBranch}
                               allPullRequests={pullRequests}
                               onNavigateToPR={onNavigateToPR}
-                              isHighlighted={highlightWorktreePath === worktree.path}
+                              isHighlighted={highlightWorktreeName === getWorktreeName(worktree)}
                               onClearHighlight={clearHighlight}
                             />
                           )

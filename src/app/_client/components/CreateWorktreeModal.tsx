@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { Button } from './ui/Button'
+import { getWorktreeNameFromPath } from '../utils/worktreeUtils'
 import { Input } from './ui/Input'
 import { useBranchReference } from '../contexts/BranchReferenceContext'
 
@@ -112,9 +113,10 @@ export function CreateWorktreeModal({
       onClose()
       setWorktreeName('')
       setBranchName('')
-      // Navigate to worktrees tab filtered by this repo, passing the created worktree path for highlighting
-      if (onNavigateToWorktrees) {
-        onNavigateToWorktrees(repoName, result?.path)
+      // Navigate to worktrees tab filtered by this repo, passing the worktree name for highlighting
+      if (onNavigateToWorktrees && result?.path) {
+        const worktreeName = getWorktreeNameFromPath(result.path)
+        onNavigateToWorktrees(repoName, worktreeName)
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
