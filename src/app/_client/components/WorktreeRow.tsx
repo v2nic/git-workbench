@@ -1,7 +1,7 @@
 import React, { memo, forwardRef } from 'react'
 import { Worktree } from '@/types/worktrees'
 import { PRNotification } from '@/types/github'
-import { ExternalLink } from 'lucide-react'
+import { Folder } from 'lucide-react'
 import { useWorktreeAnimation } from '../hooks/useWorktreeAnimation'
 import { useWorktreeActions } from '../hooks/useWorktreeActions'
 import { useWorktreeData } from '../hooks/useWorktreeData'
@@ -56,11 +56,11 @@ export const WorktreeRow = memo(forwardRef(function WorktreeRow({
         <div className="flex items-center space-x-3 flex-1">
           <div className="flex items-center space-x-2">
             <button
-              onClick={handleOpenInGitHub}
+              onClick={handleOpenInWindsurf}
               className="text-muted-foreground hover:text-foreground transition-colors"
-              title="Open in GitHub"
+              title="Open in Windsurf"
             >
-              <ExternalLink className="w-4 h-4" />
+              <Folder className="w-4 h-4" />
             </button>
             
             <div className="flex flex-col">

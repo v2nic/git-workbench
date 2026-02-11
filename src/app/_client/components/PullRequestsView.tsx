@@ -2,9 +2,10 @@ import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { usePullRequests } from '../data/usePullRequests'
 import { PRRow } from './PRRow'
 import { FilterBanner } from './FilterBanner'
+import { RepositoryHeader } from './RepositoryHeader'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
-import { GitPullRequest, CheckCircle, Users, AlertTriangle, XCircle, RefreshCw, Filter, FilterX } from 'lucide-react'
+import { GitPullRequest, CheckCircle, Users, AlertTriangle, XCircle, RefreshCw } from 'lucide-react'
 import { PRNotification } from '@/types/github'
 import clsx from 'clsx'
 
@@ -287,37 +288,14 @@ export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSucce
             {Object.entries(filteredAndGroupedPRs).map(([groupName, prs]) => (
               <div key={groupName}>
                 {groupBy !== 'none' && (
-                  <div className="px-4 py-2 bg-muted/50 border-b flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      {groupBy === 'repository' && onFilterByRepository && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (filterRepo === groupName) {
-                              onClearFilter?.()
-                            } else {
-                              onFilterByRepository(groupName)
-                            }
-                          }}
-                          title={filterRepo === groupName ? `Clear filter for ${groupName}` : `Filter by ${groupName}`}
-                          className={clsx(
-                            'text-muted-foreground hover:text-foreground',
-                            filterRepo === groupName && 'text-foreground'
-                          )}
-                        >
-                          {filterRepo === groupName ? (
-                            <FilterX className="w-4 h-4" />
-                          ) : (
-                            <Filter className="w-4 h-4" />
-                          )}
-                        </Button>
-                      )}
-                      <h3 className="font-medium text-sm text-muted-foreground">
-                        {groupName} ({prs.length})
-                      </h3>
-                    </div>
-                  </div>
+                  <RepositoryHeader
+                    repositoryName={groupName}
+                    itemCount={prs.length}
+                    showFilterButton={groupBy === 'repository' && !!onFilterByRepository}
+                    isFilterActive={filterRepo === groupName}
+                    onToggleFilter={onFilterByRepository}
+                    onClearFilter={onClearFilter}
+                  />
                 )}
                 {prs.map((pr) => {
                   const prKey = `${pr.repository}-${pr.number}`

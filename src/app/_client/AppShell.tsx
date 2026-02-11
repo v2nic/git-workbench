@@ -83,6 +83,10 @@ export function AppShell() {
     jumpToRepoPullRequests(repoName)
   }, [jumpToRepoPullRequests])
 
+  const handleFilterWorktreeByRepository = useCallback((repoName: string) => {
+    jumpToWorktreesForRepo(repoName)
+  }, [jumpToWorktreesForRepo])
+
   const handleCreateWorktree = useCallback((repoName: string) => {
     setSelectedRepo(repoName)
     setFromBranch('origin/main') // Default to origin/main
@@ -112,6 +116,10 @@ export function AppShell() {
   const handleClearPullRequestFilter = useCallback(() => {
     jumpToPullRequests()
   }, [jumpToPullRequests])
+
+  const handleFilterBranchByRepository = useCallback((repoName: string) => {
+    jumpToRepoBranches(repoName)
+  }, [jumpToRepoBranches])
 
   const handleClearBranchFilter = useCallback(() => {
     jumpToBranches()
@@ -282,6 +290,7 @@ export function AppShell() {
               onCreateFromBranch={handleCreateFromBranch}
               filterRepo={worktreeFilterRepo}
               onClearFilter={handleClearWorktreeFilter}
+              onFilterByRepository={handleFilterWorktreeByRepository}
               onSuccess={success}
               onError={error}
               onNavigateToPR={handleNavigateToPR}
@@ -292,6 +301,7 @@ export function AppShell() {
             <BranchesView
               filterRepo={branchFilterRepo}
               onClearFilter={handleClearBranchFilter}
+              onFilterByRepository={handleFilterBranchByRepository}
               onCreateWorktree={handleCreateFromBranch}
               onJumpToWorktree={handleJumpToWorktreeFromBranch}
               onSuccess={success}

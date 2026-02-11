@@ -3,16 +3,18 @@ import { useBranches } from '../data/useBranches'
 import { useRepos } from '../data/useRepos'
 import { BranchRow } from './BranchRow'
 import { FilterBanner } from './FilterBanner'
+import { RepositoryHeader } from './RepositoryHeader'
 import { DeleteBranchModal } from './DeleteBranchModal'
 import { Input } from './ui/Input'
 import { Button } from './ui/Button'
-import { Search, X, Globe, Monitor } from 'lucide-react'
+import { Search, X, Globe, Monitor, GitBranchPlus } from 'lucide-react'
 import { Branch } from '@/types/branches'
 import clsx from 'clsx'
 
 interface BranchesViewProps {
   filterRepo?: string
   onClearFilter?: () => void
+  onFilterByRepository?: (repoName: string) => void
   onCreateWorktree: (repoName: string, branchName: string) => void
   onJumpToWorktree: (repoName: string, branchName: string) => void
   onSuccess?: (message: string) => void
@@ -22,6 +24,7 @@ interface BranchesViewProps {
 export function BranchesView({
   filterRepo,
   onClearFilter,
+  onFilterByRepository,
   onCreateWorktree,
   onJumpToWorktree,
   onSuccess,
@@ -238,18 +241,21 @@ export function BranchesView({
               const isFavorite = repo?.favorite
 
               return (
-                <div
-                  key={repoName}
-                  className={clsx('border-b', isFavorite && 'bg-yellow-50/50 dark:bg-yellow-900/10')}
-                >
-                  <div className="p-4 bg-muted/30">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold">{repoName}</h3>
-                      <span className="text-xs text-muted-foreground">
-                        {repoBranches.length} {repoBranches.length === 1 ? 'branch' : 'branches'}
-                      </span>
-                    </div>
-                  </div>
+                <div key={repoName}>
+                  <RepositoryHeader
+                    repositoryName={repoName}
+                    itemCount={repoBranches.length}
+                    showFilterButton={!!onFilterByRepository}
+                    isFilterActive={filterRepo === repoName}
+                    onToggleFilter={onFilterByRepository}
+                    onClearFilter={onClearFilter}
+                    actionButton={{
+                      label: 'Create Worktree',
+                      onClick: () => {/* TODO: Implement create worktree from branch */},
+                      icon: <GitBranchPlus className="w-4 h-4 mr-1" />,
+                      variant: 'primary'
+                    }}
+                  />
 
                   <div>
                     {repoBranches.length === 0 ? (
