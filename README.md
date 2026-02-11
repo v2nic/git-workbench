@@ -53,6 +53,70 @@ A TypeScript React web application (Next.js) that reads a local JSON config of t
 
 The application uses a JSON configuration file stored at `/app/data/repos-tracked.json` (inside the container) to track repositories and settings.
 
+### Editor Configuration
+
+The application supports any editor through configurable URL schemes. Add an `editor` section to your configuration:
+
+#### Default Configuration (VS Code)
+```json
+{
+  "version": 1,
+  "paths": {
+    "bareRoot": "~/Source/git-root",
+    "worktreeRoot": "~/Source"
+  },
+  "editor": {
+    "name": "VS Code",
+    "scheme": "vscode",
+    "icon": "Code"
+  },
+  "repos": [...]
+}
+```
+
+#### Editor Examples
+
+**Windsurf:**
+```json
+{
+  "editor": {
+    "name": "Windsurf", 
+    "scheme": "windsurf",
+    "icon": "FolderOpen"
+  }
+}
+```
+
+**Cursor:**
+```json
+{
+  "editor": {
+    "name": "Cursor",
+    "scheme": "cursor", 
+    "icon": "Cpu"
+  }
+}
+```
+
+**Custom Command:**
+```json
+{
+  "editor": {
+    "name": "Custom Editor",
+    "openCommand": "my-editor://open/{path}"
+  }
+}
+```
+
+#### Configuration Options
+
+- `name`: Display name for UI elements
+- `scheme`: URL scheme (e.g., `vscode`, `windsurf`, `cursor`)
+- `icon`: Lucide icon name for buttons (supported: `Code`, `Folder`, `FolderOpen`, `Cpu`, `Terminal`, `FileText`, `Edit3`, `PenTool`)
+- `openCommand`: Custom command template with `{path}` placeholder
+
+The application will automatically use the configured editor and icon when clicking "Open" buttons on worktrees.
+
 ### Example Configuration
 
 ```json
@@ -61,6 +125,11 @@ The application uses a JSON configuration file stored at `/app/data/repos-tracke
   "paths": {
     "bareRoot": "~/Source/git-root",
     "worktreeRoot": "~/Source"
+  },
+  "editor": {
+    "name": "VS Code",
+    "scheme": "vscode",
+    "icon": "Code"
   },
   "repos": [
     {

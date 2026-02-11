@@ -1,18 +1,42 @@
 import React from 'react'
 import { Button } from './ui/Button'
 import { DropdownMenu, DropdownMenuItem } from './ui/DropdownMenu'
-import { MoreVertical, FolderOpen } from 'lucide-react'
+import { MoreVertical, FolderOpen, Code, Folder, Cpu, Terminal, FileText, Edit3, PenTool } from 'lucide-react'
+import { EditorConfig } from '@/types/config'
 
 interface WorktreeActionsProps {
   worktreePath: string
-  onOpenInWindsurf: () => void
+  editorConfig: EditorConfig
+  onOpenInEditor: () => void
   onCreateFromBranch: () => void
   onDeleteWorktree: () => void
 }
 
+function renderEditorIcon(editorConfig: EditorConfig, className: string = '') {
+  switch (editorConfig.icon) {
+    case 'Code':
+      return <Code className={className} />
+    case 'FolderOpen':
+      return <FolderOpen className={className} />
+    case 'Cpu':
+      return <Cpu className={className} />
+    case 'Terminal':
+      return <Terminal className={className} />
+    case 'FileText':
+      return <FileText className={className} />
+    case 'Edit3':
+      return <Edit3 className={className} />
+    case 'PenTool':
+      return <PenTool className={className} />
+    default:
+      return <FolderOpen className={className} />
+  }
+}
+
 export const WorktreeActions: React.FC<WorktreeActionsProps> = ({
   worktreePath,
-  onOpenInWindsurf,
+  editorConfig,
+  onOpenInEditor,
   onCreateFromBranch,
   onDeleteWorktree
 }) => {
@@ -21,10 +45,10 @@ export const WorktreeActions: React.FC<WorktreeActionsProps> = ({
       <Button
         variant="secondary"
         size="sm"
-        onClick={onOpenInWindsurf}
+        onClick={onOpenInEditor}
         title={worktreePath}
       >
-        <FolderOpen className="w-4 h-4 mr-2" />
+        {renderEditorIcon(editorConfig, "w-4 h-4 mr-2")}
         Open
       </Button>
       

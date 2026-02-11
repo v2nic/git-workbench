@@ -1,3 +1,10 @@
+export interface EditorConfig {
+  name: string           // Display name (e.g., "Windsurf", "VS Code", "Cursor")
+  scheme: string         // URL scheme (e.g., "windsurf", "vscode", "cursor")
+  icon?: string          // Optional Lucide icon name
+  openCommand?: string   // Optional custom command template
+}
+
 export interface RepoConfig {
   fullName?: string
   repoName?: string
@@ -28,5 +35,6 @@ export interface Config {
     bareRoot: string
     worktreeRoot: string
   }
+  editor: EditorConfig
   repos: RepoConfig[]
 }

@@ -3,6 +3,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useWorktrees } from '../data/useWorktrees'
 import { useRepos } from '../data/useRepos'
 import { usePullRequests } from '../data/usePullRequests'
+import { useConfig } from '../data/useConfig'
 import { WorktreeRow } from './WorktreeRow'
 import { FilterBanner } from './FilterBanner'
 import { RepositoryHeader } from './RepositoryHeader'
@@ -31,6 +32,7 @@ export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo
   const { worktrees, isLoading, error, mutate } = useWorktrees()
   const { repos } = useRepos()
   const { pullRequests } = usePullRequests()
+  const { config } = useConfig()
   
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [pendingDeleteWorktree, setPendingDeleteWorktree] = useState<Worktree | null>(null)
@@ -326,6 +328,7 @@ export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo
                               key={worktree.path}
                               ref={setRef}
                               worktree={worktree}
+                              editorConfig={config!.editor}
                               onDeleteWorktree={handleDeleteWorktree}
                               onCreateFromBranch={onCreateFromBranch}
                               allPullRequests={pullRequests}

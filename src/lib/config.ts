@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs'
 import path from 'path'
-import { Config, RepoConfig } from '@/types/config'
+import { Config, RepoConfig, EditorConfig } from '@/types/config'
 
 const CONFIG_PATH = path.join(process.env.APP_DATA_PATH || path.join(process.cwd(), 'data'), 'repos-tracked.json')
 
@@ -10,13 +10,19 @@ const DEFAULT_CONFIG: Config = {
     bareRoot: '~/Source/git-root',
     worktreeRoot: '~/Source'
   },
+  editor: {
+    name: 'VS Code',
+    scheme: 'vscode',
+    icon: 'Code'
+  },
   repos: []
 }
 
 export async function getConfig(): Promise<Config> {
   try {
     const data = await fs.readFile(CONFIG_PATH, 'utf-8')
-    return JSON.parse(data)
+    const config = JSON.parse(data)
+    return await resolveWithDefaults(config)
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       await saveConfig(DEFAULT_CONFIG)
@@ -75,5 +81,12 @@ export async function toggleFavorite(fullNameOrName: string): Promise<Config> {
     await saveConfig(config)
   }
   
+  return config
+}
+
+export async function resolveWithDefaults(config: Config): Promise<Config> {
+  if (!config.editor) {
+    config.editor = DEFAULT_CONFIG.editor
+  }
   return config
 }

@@ -1,9 +1,12 @@
 import { useCallback } from 'react'
 import { Worktree } from '@/types/worktrees'
 import { PRNotification } from '@/types/github'
+import { generateEditorUrl } from '@/lib/editor'
+import { EditorConfig } from '@/types/config'
 
 interface UseWorktreeActionsProps {
   worktree: Worktree
+  editorConfig: EditorConfig
   onDeleteWorktree: (worktree: Worktree) => void
   onCreateFromBranch: (repoName: string, branchName: string) => void
   onNavigateToPR?: (prNumber: number, prRepository: string) => void
@@ -12,7 +15,7 @@ interface UseWorktreeActionsProps {
 
 interface UseWorktreeActionsReturn {
   handleOpenInGitHub: () => void
-  handleOpenInWindsurf: () => void
+  handleOpenInEditor: () => void
   handleDeleteWorktree: () => void
   handleCreateFromBranch: () => void
   handleNavigateToPR: () => void
@@ -20,6 +23,7 @@ interface UseWorktreeActionsReturn {
 
 export const useWorktreeActions = ({
   worktree,
+  editorConfig,
   onDeleteWorktree,
   onCreateFromBranch,
   onNavigateToPR,
@@ -32,10 +36,10 @@ export const useWorktreeActions = ({
     }
   }, [worktree.repoFullName, worktree.branch])
 
-  const handleOpenInWindsurf = useCallback(() => {
-    const url = `windsurf://file/${encodeURIComponent(worktree.path)}`
+  const handleOpenInEditor = useCallback(() => {
+    const url = generateEditorUrl(editorConfig, worktree.path)
     window.open(url, '_blank')
-  }, [worktree.path])
+  }, [editorConfig, worktree.path])
 
   const handleDeleteWorktree = useCallback(() => {
     onDeleteWorktree(worktree)
@@ -54,7 +58,7 @@ export const useWorktreeActions = ({
 
   return {
     handleOpenInGitHub,
-    handleOpenInWindsurf,
+    handleOpenInEditor,
     handleDeleteWorktree,
     handleCreateFromBranch,
     handleNavigateToPR
