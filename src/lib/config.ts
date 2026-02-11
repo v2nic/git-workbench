@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import { Config, RepoConfig, EditorConfig } from '@/types/config'
+import { expandPath } from '@/lib/git'
 
 const CONFIG_PATH = path.join(process.env.APP_DATA_PATH || path.join(process.cwd(), 'data'), 'repos-tracked.json')
 
@@ -22,10 +23,13 @@ export async function getConfig(): Promise<Config> {
   try {
     const data = await fs.readFile(CONFIG_PATH, 'utf-8')
     const config = JSON.parse(data)
-    return await resolveWithDefaults(config)
+    const resolvedConfig = await resolveWithDefaults(config)
+    await ensureDirectoriesExist(resolvedConfig)
+    return resolvedConfig
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       await saveConfig(DEFAULT_CONFIG)
+      await ensureDirectoriesExist(DEFAULT_CONFIG)
       return DEFAULT_CONFIG
     }
     throw error
@@ -89,4 +93,20 @@ export async function resolveWithDefaults(config: Config): Promise<Config> {
     config.editor = DEFAULT_CONFIG.editor
   }
   return config
+}
+
+async function ensureDirectoriesExist(config: Config): Promise<void> {
+  const directories = [
+    expandPath(config.paths.bareRoot),
+    expandPath(config.paths.worktreeRoot)
+  ]
+  
+  for (const dir of directories) {
+    try {
+      await fs.access(dir)
+    } catch {
+      await fs.mkdir(dir, { recursive: true })
+      console.log(`Created directory: ${dir}`)
+    }
+  }
 }
