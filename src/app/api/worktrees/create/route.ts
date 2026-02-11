@@ -204,6 +204,22 @@ export async function POST(request: NextRequest) {
       await execCommand(`git --git-dir "${gitDir}" worktree add -b "${worktreeName}" "${worktreePath}" "${targetRef}"`)
     }
 
+    // Configure remote fetch setting and upstream tracking for proper branch tracking
+    try {
+      await execCommand(`git -C "${worktreePath}" config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"`)
+      await execCommand(`git -C "${worktreePath}" fetch origin`)
+      
+      // Set up upstream branch tracking for push functionality
+      // Only set upstream if the branch exists on the remote
+      const upstreamExists = await execCommand(`git -C "${worktreePath}" rev-parse --verify "origin/${worktreeName}"`).then(() => true).catch(() => false)
+      if (upstreamExists) {
+        await execCommand(`git -C "${worktreePath}" branch --set-upstream-to="origin/${worktreeName}" "${worktreeName}"`)
+      }
+    } catch (remoteConfigError) {
+      console.warn('Failed to configure remote tracking:', remoteConfigError)
+      // Don't fail the worktree creation, just log the warning
+    }
+
     return NextResponse.json({ 
       message: 'Worktree created successfully',
       path: worktreePath,
