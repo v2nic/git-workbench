@@ -7,7 +7,7 @@ import { TokenBucket } from '@/lib/tokenBucket'
 
 const execAsync = promisify(exec)
 
-const PERSIST_PATH = '/tmp/repo-worktree-ui-pr-worker-cache.json'
+const PERSIST_PATH = '/tmp/git-workbench-pr-worker-cache.json'
 
 type WorkerStatus =
   | { type: 'starting' }

@@ -33,8 +33,8 @@ RUN npm run build
 # Create app data directory
 RUN mkdir -p /app/data
 
-# Expose port 4498 (GHWT on telephone keypad: G=4, H=4, W=9, T=8)
-EXPOSE 4498
+# Expose port 2624 (BNCH on telephone keypad: B=2, N=6, C=2, H=4)
+EXPOSE 2624
 
 # Set environment variables
 ENV NODE_ENV=production

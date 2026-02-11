@@ -6,8 +6,8 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: {
-    default: 'Git',
-    template: 'Git | %s'
+    default: 'Git Workbench',
+    template: 'Git Workbench | %s'
   },
   description: 'Manage git repositories and worktrees',
   icons: {

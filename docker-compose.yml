@@ -1,8 +1,8 @@
 services:
-  ghwt:
+  git-workbench:
     build: .
     ports:
-      - "4498:3000"
+      - "2624:3000"
     environment:
       - SOURCE_BASE_PATH=/home/node/Source
       - NODE_ENV=production
