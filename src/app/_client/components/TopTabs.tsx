@@ -1,5 +1,6 @@
 import React from 'react'
 import { Tab } from '../state/useAppNavigation'
+import { Button } from './ui/Button'
 import clsx from 'clsx'
 
 interface TopTabsProps {

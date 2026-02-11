@@ -288,12 +288,12 @@ export function WorktreesView({ onCreateWorktree, onCreateFromBranch, filterRepo
               const isFavorite = repo?.favorite
 
               return (
-                <div key={repoName} className={clsx('border-b', isFavorite && 'bg-yellow-50/50 dark:bg-yellow-900/10')}>
+                <div key={repoName} className="border-b">
                   <div className="p-4 bg-muted/30">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold">{repoName}</h3>
                       <Button
-                        variant="secondary"
+                        variant="primary"
                         size="sm"
                         onClick={() => onCreateWorktree(repoName)}
                       >

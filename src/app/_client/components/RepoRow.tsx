@@ -147,19 +147,21 @@ export const RepoRow = memo(function RepoRow({
     <div className="border-b p-4 hover:bg-muted/50 transition-colors">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleToggleFavorite}
-            className="text-muted-foreground hover:text-yellow-500 transition-colors"
+            className="text-muted-foreground hover:text-yellow-500"
             aria-label={repo.favorite ? 'Remove from favorites' : 'Add to favorites'}
           >
             <Star className={clsx('w-5 h-5', repo.favorite && 'fill-yellow-500 text-yellow-500')} />
-          </button>
+          </Button>
           
           <div>
             <h3 
               className={clsx(
-                'font-medium',
-                repo.remoteUrls?.some(url => url.includes('github.com')) && 'text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 cursor-pointer underline'
+                'font-medium cursor-pointer transition-colors',
+                repo.remoteUrls?.some(url => url.includes('github.com')) && 'hover:text-blue-600'
               )}
               onClick={handleRepoNameClick}
             >
@@ -184,7 +186,7 @@ export const RepoRow = memo(function RepoRow({
           {/* Show Track button if repo is untracked */}
           {!repo.tracked && onTrackRepo && (
             <Button
-              variant="secondary"
+              variant="primary"
               size="sm"
               onClick={handleTrackRepo}
               title="Track this repository"
@@ -197,7 +199,7 @@ export const RepoRow = memo(function RepoRow({
           {/* Show Clone button if repo needs cloning and has remote URLs */}
           {needsClone && repo.remoteUrls && repo.remoteUrls.length > 0 && (
             <Button
-              variant="secondary"
+              variant="primary"
               size="sm"
               onClick={handleCloneRepo}
               title="Clone repository"
@@ -210,7 +212,7 @@ export const RepoRow = memo(function RepoRow({
           {/* Show Publish button if repo is local (no SSH URL) */}
           {!repo.sshUrl && !repo.httpsUrl && onPublishRepo && (
             <Button
-              variant="secondary"
+              variant="primary"
               size="sm"
               onClick={handlePublishRepo}
               title="Publish repository to GitHub"
@@ -253,28 +255,30 @@ export const RepoRow = memo(function RepoRow({
             onClick={handleCreateWorktree}
           >
             <GitBranchPlus className="w-4 h-4 mr-1" />
-            Create
+            Create worktree
           </Button>
 
           {/* Three-dot menu */}
           <div className="relative" ref={menuRef}>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleMenuToggle}
-              className="p-1 rounded-md hover:bg-muted transition-colors"
               aria-label="More options"
             >
               <MoreVertical className="w-4 h-4" />
-            </button>
+            </Button>
 
             {showMenu && (
               <div className="absolute right-0 top-full mt-1 bg-background border rounded-md shadow-lg z-50 min-w-[160px]">
-                <button
+                <Button
                   onClick={handleDeleteClick}
-                  className="flex items-center space-x-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  variant="destructive"
+                  className="w-full"
                 >
                   <Trash2 className="w-4 h-4" />
                   <span>Delete repository</span>
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -296,18 +300,18 @@ export const RepoRow = memo(function RepoRow({
               Are you sure you want to delete &quot;{repo.repoName}&quot;? This action cannot be undone.
             </p>
             <div className="flex justify-end space-x-3">
-              <button
+              <Button
                 onClick={() => setShowDeleteDialog(false)}
-                className="px-4 py-2 text-sm border rounded-md hover:bg-muted transition-colors"
+                variant="secondary"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleDeleteRepo}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                variant="destructive"
               >
                 Delete
-              </button>
+              </Button>
             </div>
           </div>
         </div>

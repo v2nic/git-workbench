@@ -28,14 +28,6 @@ export const WorktreeActions: React.FC<WorktreeActionsProps> = ({
         Open
       </Button>
       
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={onCreateFromBranch}
-      >
-        Create from this branch
-      </Button>
-      
       <DropdownMenu
         trigger={
           <Button variant="ghost" size="sm">
@@ -43,6 +35,9 @@ export const WorktreeActions: React.FC<WorktreeActionsProps> = ({
           </Button>
         }
       >
+        <DropdownMenuItem onClick={onCreateFromBranch}>
+          Duplicate worktree
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={onDeleteWorktree}>
           Delete
         </DropdownMenuItem>

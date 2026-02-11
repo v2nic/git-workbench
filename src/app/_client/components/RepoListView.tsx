@@ -171,7 +171,7 @@ export function RepoListView({
           </div>
           
           {onAddRepo && (
-            <Button onClick={onAddRepo} variant="secondary">
+            <Button onClick={onAddRepo} variant="primary">
               <Plus className="w-4 h-4 mr-2" />
               Create
             </Button>

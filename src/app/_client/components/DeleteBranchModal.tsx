@@ -118,10 +118,9 @@ export function DeleteBranchModal({
             Cancel
           </Button>
           <Button
-            variant="primary"
+            variant="destructive"
             onClick={handleConfirm}
             disabled={isLoading || (isLocalOnly && !branch.isMergedToMain && !forceDelete)}
-            className="bg-red-600 hover:bg-red-700 text-white"
           >
             {isLoading ? 'Deleting...' : 'Delete'}
           </Button>

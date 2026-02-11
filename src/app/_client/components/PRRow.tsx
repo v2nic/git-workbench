@@ -200,7 +200,7 @@ export const PRRow = memo(function PRRow({ pr, onCopyNumber, onCreateWorktree, o
             </Button>
           ) : (
             <Button
-              variant="secondary"
+              variant="primary"
               size="sm"
               onClick={handleCreateWorktree}
               title={`Create worktree for ${pr.headRef}`}
@@ -209,14 +209,6 @@ export const PRRow = memo(function PRRow({ pr, onCopyNumber, onCreateWorktree, o
               Create Worktree
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleOpenPR}
-            title="Open in GitHub"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </Button>
         </div>
       </div>
     </div>
