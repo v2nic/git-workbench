@@ -1,11 +1,14 @@
 import React, { memo, useCallback } from 'react'
 import { Button } from './ui/Button'
-import { GitPullRequest, CheckCircle, XCircle, AlertCircle, Clock, Copy, ExternalLink, FolderPlus, Github, Star, FolderOpen } from 'lucide-react'
+import { GitPullRequest, CheckCircle, XCircle, AlertCircle, Clock, Copy, ExternalLink, FolderPlus, Github, Star, FolderOpen, Code, Cpu, Terminal, FileText, Edit3, PenTool } from 'lucide-react'
 import { PRNotification } from '@/types/github'
+import { EditorConfig } from '@/types/config'
 import { useUserInfo } from '../data/useUserInfo'
 import { useWorktrees } from '../data/useWorktrees'
 import { useWorktreeCreation } from '../hooks/useWorktreeCreation'
 import { CopyLabel } from './CopyLabel'
+import { PRActions } from './PRActions'
+import { generateEditorUrl } from '@/lib/editor'
 import clsx from 'clsx'
 
 interface PRRowProps {
@@ -13,9 +16,36 @@ interface PRRowProps {
   onCopyNumber?: (number: number) => void
   onCreateWorktree?: (repoName: string) => void
   onCreateFromBranch?: (repoName: string, branchName: string) => void
+  onDeleteWorktree?: (pr: PRNotification) => void
+  editorConfig?: EditorConfig
 }
 
-export const PRRow = memo(function PRRow({ pr, onCopyNumber, onCreateWorktree, onCreateFromBranch }: PRRowProps) {
+function renderEditorIcon(editorConfig?: EditorConfig, className: string = '') {
+  if (!editorConfig) {
+    return <FolderOpen className={className} />
+  }
+  
+  switch (editorConfig.icon) {
+    case 'Code':
+      return <Code className={className} />
+    case 'FolderOpen':
+      return <FolderOpen className={className} />
+    case 'Cpu':
+      return <Cpu className={className} />
+    case 'Terminal':
+      return <Terminal className={className} />
+    case 'FileText':
+      return <FileText className={className} />
+    case 'Edit3':
+      return <Edit3 className={className} />
+    case 'PenTool':
+      return <PenTool className={className} />
+    default:
+      return <FolderOpen className={className} />
+  }
+}
+
+export const PRRow = memo(function PRRow({ pr, onCopyNumber, onCreateWorktree, onCreateFromBranch, onDeleteWorktree, editorConfig }: PRRowProps) {
   const { userInfo } = useUserInfo()
   const { worktrees } = useWorktrees()
   const { handleCreateWorktree } = useWorktreeCreation({ pr, onCreateFromBranch, onCreateWorktree })
@@ -28,12 +58,13 @@ export const PRRow = memo(function PRRow({ pr, onCopyNumber, onCreateWorktree, o
 
   const handleOpenWorktree = useCallback(() => {
     const worktree = worktrees.find(w => w.branch === pr.headRef)
-    if (worktree) {
+    if (worktree && editorConfig) {
       if (typeof window !== 'undefined') {
-        window.open(`file://${worktree.path}`, '_blank')
+        const url = generateEditorUrl(editorConfig, worktree.path)
+        window.open(url, '_blank')
       }
     }
-  }, [pr.headRef, worktrees])
+  }, [pr.headRef, worktrees, editorConfig])
 
   const getRelativeTime = (dateString: string) => {
     const date = new Date(dateString)
@@ -188,7 +219,17 @@ export const PRRow = memo(function PRRow({ pr, onCopyNumber, onCreateWorktree, o
           </div>
         </div>
         <div className="flex items-center space-x-2 ml-4">
-          {hasMatchingWorktree ? (
+          {hasMatchingWorktree && editorConfig ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleOpenWorktree}
+              title={`Open in ${editorConfig.name}`}
+            >
+              {renderEditorIcon(editorConfig, "w-4 h-4 mr-2")}
+              Open
+            </Button>
+          ) : hasMatchingWorktree ? (
             <Button
               variant="secondary"
               size="sm"
@@ -208,6 +249,13 @@ export const PRRow = memo(function PRRow({ pr, onCopyNumber, onCreateWorktree, o
               <FolderPlus className="w-4 h-4 mr-2" />
               Create Worktree
             </Button>
+          )}
+          {onDeleteWorktree && (
+            <PRActions
+              pr={pr}
+              hasMatchingWorktree={hasMatchingWorktree}
+              onDeleteWorktree={onDeleteWorktree}
+            />
           )}
         </div>
       </div>

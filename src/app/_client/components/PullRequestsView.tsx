@@ -1,12 +1,16 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { usePullRequests } from '../data/usePullRequests'
+import { useConfig } from '../data/useConfig'
+import { useWorktrees } from '../data/useWorktrees'
 import { PRRow } from './PRRow'
 import { FilterBanner } from './FilterBanner'
 import { RepositoryHeader } from './RepositoryHeader'
+import { DeleteWorktreeModal } from './DeleteWorktreeModal'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { GitPullRequest, CheckCircle, Users, AlertTriangle, XCircle, RefreshCw } from 'lucide-react'
 import { PRNotification } from '@/types/github'
+import { Worktree, WorktreeStatus } from '@/types/worktrees'
 import clsx from 'clsx'
 
 type GroupBy = 'none' | 'repository' | 'reason'
@@ -26,10 +30,16 @@ interface PullRequestsViewProps {
 
 export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSuccess, onError, highlightPRNumber, highlightPRRepository, filterRepo, onClearFilter, onFilterByRepository }: PullRequestsViewProps) {
   const { pullRequests, isLoading, error, cached, rateLimited, timestamp, retryInSeconds, errorMessage, updateAvailable, refreshPullRequests } = usePullRequests()
+  const { config } = useConfig()
+  const { worktrees, mutate: mutateWorktrees } = useWorktrees()
   const [searchQuery, setSearchQuery] = useState('')
   const [groupBy, setGroupBy] = useState<GroupBy>('repository')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ready')
   const [animatingPRKey, setAnimatingPRKey] = useState<string | null>(null)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [pendingDeletePR, setPendingDeletePR] = useState<PRNotification | null>(null)
+  const [pendingDeleteStatus, setPendingDeleteStatus] = useState<WorktreeStatus | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const prRowRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
   const retryLabel = retryInSeconds ?? 10
@@ -128,6 +138,78 @@ export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSucce
         .catch(err => console.error('Failed to copy PR number:', err))
     }
   }, [])
+
+  const handleDeleteWorktree = useCallback(async (pr: PRNotification) => {
+    const worktree = worktrees.find(w => w.branch === pr.headRef)
+    if (!worktree) return
+
+    try {
+      const response = await fetch('/api/worktrees/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repo: worktree.repoFullName || worktree.repoName,
+          worktreePath: worktree.path,
+          expectedStatus: worktree.status
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        if (error.requiresConfirmation) {
+          setPendingDeletePR(pr)
+          setPendingDeleteStatus(error.status)
+          setDeleteModalOpen(true)
+          return
+        } else {
+          throw new Error(error.error)
+        }
+      }
+
+      mutateWorktrees()
+      onSuccess?.(`Worktree for '${pr.headRef}' deleted successfully`)
+    } catch (error) {
+      console.error('Failed to delete worktree:', error)
+      onError?.(`Failed to delete worktree: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }, [worktrees, mutateWorktrees, onSuccess, onError])
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!pendingDeletePR) return
+
+    const worktree = worktrees.find(w => w.branch === pendingDeletePR.headRef)
+    if (!worktree) return
+
+    setIsDeleting(true)
+    try {
+      const response = await fetch('/api/worktrees/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repo: worktree.repoFullName || worktree.repoName,
+          worktreePath: worktree.path,
+          force: true,
+          expectedStatus: worktree.status
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to delete worktree')
+      }
+
+      setDeleteModalOpen(false)
+      setPendingDeletePR(null)
+      setPendingDeleteStatus(null)
+      mutateWorktrees()
+      onSuccess?.(`Worktree for '${pendingDeletePR.headRef}' deleted successfully`)
+    } catch (error) {
+      console.error('Failed to delete worktree:', error)
+      onError?.(`Failed to delete worktree: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsDeleting(false)
+    }
+  }, [pendingDeletePR, worktrees, mutateWorktrees, onSuccess, onError])
 
   const getStats = useMemo(() => {
     const stats = {
@@ -320,6 +402,8 @@ export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSucce
                         onCopyNumber={handleCopyNumber}
                         onCreateWorktree={onCreateWorktree}
                         onCreateFromBranch={onCreateFromBranch}
+                        onDeleteWorktree={handleDeleteWorktree}
+                        editorConfig={config?.editor}
                       />
                     </div>
                   )
@@ -348,6 +432,19 @@ export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSucce
           </div>
         </div>
       )}
+
+      <DeleteWorktreeModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false)
+          setPendingDeletePR(null)
+          setPendingDeleteStatus(null)
+        }}
+        worktree={pendingDeletePR ? worktrees.find(w => w.branch === pendingDeletePR.headRef) || null : null}
+        status={pendingDeleteStatus}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+      />
     </div>
   )
 }

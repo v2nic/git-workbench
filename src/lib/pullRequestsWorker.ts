@@ -364,44 +364,18 @@ export class PullRequestsWorker {
 
   private async fetchFavorites(favorites: string[], signal: AbortSignal): Promise<PRNotification[]> {
     const results: PRNotification[] = []
+    const allPRs: Array<{ pr: any; repo: string }> = []
 
     for (const repo of favorites) {
       try {
         const prs = await this.ghJson<any[]>(
-          `gh search prs --repo "${repo}" --state open --limit 50 --json title,url,state,number,closedAt,updatedAt,createdAt,author,repository,isDraft`,
+          `gh search prs --repo "${repo}" --limit 50 --json title,url,state,number,closedAt,updatedAt,createdAt,author,repository,isDraft,headRefName`,
           'favorite_repo',
           signal
         )
         
-        // Fetch detailed PR info for each PR to get the branch name
         for (const pr of prs) {
-          const state = typeof pr.state === 'string' ? pr.state.toLowerCase() : 'open'
-          if (state !== 'open') {
-            continue
-          }
-          try {
-            const repoName = pr.repository?.nameWithOwner || pr.repository?.fullName || pr.repository || repo
-            if (repoName && pr.number) {
-              console.log(`Fetching favorite PR details: gh api repos/${repoName}/pulls/${pr.number}`)
-              const prDetails = await this.ghJson<any>(
-                `gh api repos/${repoName}/pulls/${pr.number}`,
-                'favorite_repo',
-                signal
-              )
-              // Merge the search results with detailed PR info
-              const mergedPR = {
-                ...pr,
-                headRefName: prDetails.head?.ref || `pr-${pr.number}`
-              }
-              results.push(this.normalize(mergedPR, 'favorite', repo))
-            } else {
-              results.push(this.normalize(pr, 'favorite', repo))
-            }
-          } catch (error) {
-            // Fallback to basic PR data if details fetch fails
-            console.warn(`Failed to fetch details for PR #${pr.number} in ${repo}:`, error)
-            results.push(this.normalize(pr, 'favorite', repo))
-          }
+          allPRs.push({ pr, repo })
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
@@ -410,6 +384,51 @@ export class PullRequestsWorker {
           continue
         }
         throw err
+      }
+    }
+
+    const prsByRepo = new Map<string, any[]>()
+    for (const { pr, repo } of allPRs) {
+      if (!prsByRepo.has(repo)) {
+        prsByRepo.set(repo, [])
+      }
+      prsByRepo.get(repo)!.push(pr)
+    }
+
+    for (const [repo, prs] of Array.from(prsByRepo.entries())) {
+      const prNumbers = prs.map((pr: any) => pr.number).join(' ')
+      if (!prNumbers) continue
+
+      try {
+        const prDetails = await this.ghJson<any[]>(
+          `gh api repos/${repo}/pulls --state all --limit 100 --jq '.[] | select(.number == ${prs.map((p: any) => p.number).join(' or .number == ')})'`,
+          'favorite_repo',
+          signal
+        )
+
+        const detailsMap = new Map(prDetails.map(pr => [pr.number, pr]))
+
+        for (const pr of prs) {
+          const details = detailsMap.get(pr.number)
+          if (details) {
+            const mergedPR = {
+              ...pr,
+              headRefName: details.head?.ref || pr.headRefName || `pr-${pr.number}`,
+              state: details.state,
+              merged: details.merged,
+              closedAt: details.closed_at,
+              updatedAt: details.updated_at
+            }
+            results.push(this.normalize(mergedPR, 'favorite', repo))
+          } else {
+            results.push(this.normalize(pr, 'favorite', repo))
+          }
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch batch details for ${repo}:`, error)
+        for (const pr of prs) {
+          results.push(this.normalize(pr, 'favorite', repo))
+        }
       }
     }
 
