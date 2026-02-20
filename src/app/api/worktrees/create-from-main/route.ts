@@ -49,13 +49,23 @@ export async function POST(request: NextRequest) {
     // Create worktree for the new branch
     await execCommand(`git --git-dir "${barePath}" worktree add "${worktreePath}" "${newBranchName}"`)
 
-    // Configure remote fetch setting and upstream tracking for proper branch tracking
+    // Configure remote fetch setting and push behavior for proper branch tracking
     try {
       await execCommand(`git -C "${worktreePath}" config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"`)
       await execCommand(`git -C "${worktreePath}" fetch origin`)
       
-      // Set up upstream branch tracking for push functionality
-      await execCommand(`git -C "${worktreePath}" branch --set-upstream-to="origin/${newBranchName}" "${newBranchName}"`)
+      // Configure push behavior to push to origin/newBranchName by default
+      // This ensures 'git push' will push to origin/newBranchName even though it doesn't exist yet
+      await execCommand(`git -C "${worktreePath}" config push.default current`)
+      
+      // Set up upstream tracking to the source branch (origin/defaultBranch) for pull operations
+      // but configure push to go to origin/newBranchName
+      await execCommand(`git -C "${worktreePath}" branch --set-upstream-to="origin/${defaultBranch}" "${newBranchName}"`)
+      
+      // Configure the branch to push to origin/newBranchName specifically
+      await execCommand(`git -C "${worktreePath}" config branch."${newBranchName}".pushRemote origin`)
+      await execCommand(`git -C "${worktreePath}" config branch."${newBranchName}".remote origin`)
+      await execCommand(`git -C "${worktreePath}" config branch."${newBranchName}".merge refs/heads/${newBranchName}`)
     } catch (remoteConfigError) {
       console.warn('Failed to configure remote tracking:', remoteConfigError)
       // Don't fail the worktree creation, just log the warning

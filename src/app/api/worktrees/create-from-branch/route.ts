@@ -46,10 +46,24 @@ export async function POST(request: NextRequest) {
       await execCommand(`git -C "${worktreePath}" config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"`)
       await execCommand(`git -C "${worktreePath}" fetch origin`)
       
-      // Set up upstream branch tracking for push functionality
-      // If fromBranch is a remote branch, use it as upstream; otherwise use origin/newBranchName
-      const upstreamBranch = fromBranch.startsWith('origin/') ? fromBranch : `origin/${newBranchName}`
-      await execCommand(`git -C "${worktreePath}" branch --set-upstream-to="${upstreamBranch}" "${newBranchName}"`)
+      // Configure push behavior based on the source branch type
+      if (fromBranch.startsWith('origin/')) {
+        // Creating from a remote branch - push should go to that remote branch
+        await execCommand(`git -C "${worktreePath}" branch --set-upstream-to="${fromBranch}" "${newBranchName}"`)
+        await execCommand(`git -C "${worktreePath}" config push.default upstream`)
+      } else {
+        // Creating from a local branch - configure push to go to origin/newBranchName
+        await execCommand(`git -C "${worktreePath}" config push.default current`)
+        await execCommand(`git -C "${worktreePath}" config branch."${newBranchName}".pushRemote origin`)
+        await execCommand(`git -C "${worktreePath}" config branch."${newBranchName}".remote origin`)
+        await execCommand(`git -C "${worktreePath}" config branch."${newBranchName}".merge refs/heads/${newBranchName}`)
+        
+        // Set upstream to the local branch for pull operations if it exists remotely
+        const upstreamExists = await execCommand(`git -C "${worktreePath}" rev-parse --verify "origin/${fromBranch}"`).then(() => true).catch(() => false)
+        if (upstreamExists) {
+          await execCommand(`git -C "${worktreePath}" branch --set-upstream-to="origin/${fromBranch}" "${newBranchName}"`)
+        }
+      }
     } catch (remoteConfigError) {
       console.warn('Failed to configure remote tracking:', remoteConfigError)
       // Don't fail the worktree creation, just log the warning

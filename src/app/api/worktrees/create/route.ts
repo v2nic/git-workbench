@@ -214,6 +214,17 @@ export async function POST(request: NextRequest) {
       const upstreamExists = await execCommand(`git -C "${worktreePath}" rev-parse --verify "origin/${worktreeName}"`).then(() => true).catch(() => false)
       if (upstreamExists) {
         await execCommand(`git -C "${worktreePath}" branch --set-upstream-to="origin/${worktreeName}" "${worktreeName}"`)
+      } else {
+        // Branch doesn't exist remotely, configure push to go to origin/worktreeName by default
+        await execCommand(`git -C "${worktreePath}" config push.default current`)
+        await execCommand(`git -C "${worktreePath}" config branch."${worktreeName}".pushRemote origin`)
+        await execCommand(`git -C "${worktreePath}" config branch."${worktreeName}".remote origin`)
+        await execCommand(`git -C "${worktreePath}" config branch."${worktreeName}".merge refs/heads/${worktreeName}`)
+        
+        // If we created from a remote branch, set that as upstream for pull operations
+        if (targetRef && targetRef.startsWith('origin/') && targetRef !== `origin/${worktreeName}`) {
+          await execCommand(`git -C "${worktreePath}" branch --set-upstream-to="${targetRef}" "${worktreeName}"`)
+        }
       }
     } catch (remoteConfigError) {
       console.warn('Failed to configure remote tracking:', remoteConfigError)
