@@ -132,8 +132,8 @@ export function CreateWorktreeModal({
   const isBranchAutoPopulated = branchName === worktreeName && worktreeName !== ''
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={handleClose}>
-      <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onMouseDown={handleClose}>
+      <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4" onMouseDown={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-semibold mb-4">Create Worktree</h2>
         <p className="text-muted-foreground mb-4">
           Create a new worktree for repository: <strong>{repoName}</strong>
