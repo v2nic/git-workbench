@@ -274,7 +274,7 @@ export const RepoRow = memo(function RepoRow({
                 <Button
                   onClick={handleDeleteClick}
                   variant="destructive"
-                  className="w-full"
+                  className="w-full whitespace-nowrap"
                 >
                   <Trash2 className="w-4 h-4" />
                   <span>Delete repository</span>
