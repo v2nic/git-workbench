@@ -18,17 +18,17 @@ export function FilterBanner({
   if (!filterValue) return null
 
   return (
-    <div className={`bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 px-4 py-3 ${className}`}>
+    <div className={`bg-blue-50 border-b border-blue-200 px-4 py-3 ${className}`}>
       <div className="flex items-center justify-between">
-        <span className="text-sm text-blue-800 dark:text-blue-200">
-          Showing {filterType} for: <strong>{filterValue}</strong>
+        <span className="text-sm text-blue-800">
+          Showing {filterType} for: <strong className="text-blue-900">{filterValue}</strong>
         </span>
         {onClearFilter && (
           <Button
             variant="ghost"
             size="sm"
             onClick={onClearFilter}
-            className="text-blue-700 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
+            className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
           >
             <X className="w-4 h-4 mr-1" />
             Clear Filter
