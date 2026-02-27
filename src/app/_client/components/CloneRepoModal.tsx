@@ -1,6 +1,7 @@
-import React, { useState, useCallback, useRef, memo } from 'react'
+import React, { useState, useCallback, useRef, memo, useEffect } from 'react'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
+import { Spinner } from './ui/Spinner'
 import { RepoInfo } from '@/types/clone'
 
 export interface CloneRepoModalProps {
@@ -21,21 +22,17 @@ export const CloneRepoModal = memo(function CloneRepoModal({
   const [url, setUrl] = useState('')
   const [isValid, setIsValid] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [repoInfo, setRepoInfo] = useState<RepoInfo | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const debounceRef = useRef<NodeJS.Timeout>()
 
-  const updateUrl = useCallback((newUrl: string) => {
-    setUrl(newUrl)
-    setIsValid(false)
-    setError('')
-    setRepoInfo(null)
-  }, [])
-
-  const validateUrl = useCallback(async () => {
-    const trimmedUrl = url.trim()
+  const validateUrl = useCallback(async (urlToValidate: string) => {
+    const trimmedUrl = urlToValidate.trim()
     if (!trimmedUrl) {
       setError('Please enter a repository URL')
+      setIsLoading(false)
       return
     }
 
@@ -45,6 +42,7 @@ export const CloneRepoModal = memo(function CloneRepoModal({
       const match = trimmedUrl.match(/github\.com\/([^\/]+)\/([^\/\?]+)/)
       if (!match) {
         setError('Invalid GitHub URL format')
+        setIsLoading(false)
         return
       }
       owner = match[1]
@@ -53,10 +51,10 @@ export const CloneRepoModal = memo(function CloneRepoModal({
       [owner, repo] = trimmedUrl.split('/')
     } else {
       setError('Invalid format. Use https://github.com/org/repo or org/repo')
+      setIsLoading(false)
       return
     }
 
-    setIsSubmitting(true)
     setError('')
 
     try {
@@ -77,15 +75,38 @@ export const CloneRepoModal = memo(function CloneRepoModal({
 
       setRepoInfo(newRepoInfo)
       setIsValid(true)
+      setError('')
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to validate repository'
       setError(errorMessage)
       setIsValid(false)
       setRepoInfo(null)
     } finally {
-      setIsSubmitting(false)
+      setIsLoading(false)
     }
-  }, [url])
+  }, [])
+
+  const updateUrl = useCallback((newUrl: string) => {
+    setUrl(newUrl)
+    setIsValid(false)
+    setError('')
+    setRepoInfo(null)
+    
+    // Clear existing debounce
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+    }
+    
+    // Only validate if URL is not empty
+    if (newUrl.trim()) {
+      setIsLoading(true)
+      debounceRef.current = setTimeout(() => {
+        validateUrl(newUrl)
+      }, 800) // 800ms debounce delay
+    } else {
+      setIsLoading(false)
+    }
+  }, [validateUrl])
 
   const submitClone = useCallback(async () => {
     if (!isValid || !repoInfo) {
@@ -140,6 +161,15 @@ export const CloneRepoModal = memo(function CloneRepoModal({
     setError('')
   }, [])
 
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
+      }
+    }
+  }, [])
+
   if (!isOpen) return null
 
   return (
@@ -177,9 +207,8 @@ export const CloneRepoModal = memo(function CloneRepoModal({
               type="text"
               value={url}
               onChange={(e) => updateUrl(e.target.value)}
-              onBlur={validateUrl}
               placeholder="https://github.com/org/repo or org/repo"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isLoading}
               autoFocus
             />
             <p className="text-xs text-muted-foreground mt-1">
@@ -187,7 +216,14 @@ export const CloneRepoModal = memo(function CloneRepoModal({
             </p>
           </div>
 
-          {repoInfo && (
+          {isLoading && (
+            <div className="bg-muted/30 rounded-md p-3 flex items-center justify-center space-x-2">
+              <Spinner size="sm" />
+              <span className="text-sm text-muted-foreground">Finding repository...</span>
+            </div>
+          )}
+
+          {repoInfo && !isLoading && (
             <div className="bg-muted/30 rounded-md p-3 space-y-2">
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
