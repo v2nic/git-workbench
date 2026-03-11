@@ -1,24 +1,24 @@
-import { useCallback } from 'react'
-import { Worktree } from '@/types/worktrees'
-import { PRNotification } from '@/types/github'
-import { generateEditorUrl } from '@/lib/editor'
-import { EditorConfig } from '@/types/config'
+import { useCallback } from "react";
+import { Worktree } from "@/types/worktrees";
+import { PRNotification } from "@/types/github";
+import { generateEditorUrl } from "@/lib/editor";
+import { EditorConfig } from "@/types/config";
 
 interface UseWorktreeActionsProps {
-  worktree: Worktree
-  editorConfig: EditorConfig
-  onDeleteWorktree: (worktree: Worktree) => void
-  onCreateFromBranch: (repoName: string, branchName: string) => void
-  onNavigateToPR?: (prNumber: number, prRepository: string) => void
-  matchingPR?: PRNotification
+  worktree: Worktree;
+  editorConfig: EditorConfig;
+  onDeleteWorktree: (worktree: Worktree) => void;
+  onCreateFromBranch: (repoName: string, branchName: string) => void;
+  onNavigateToPR?: (prNumber: number, prRepository: string) => void;
+  matchingPR?: PRNotification;
 }
 
 interface UseWorktreeActionsReturn {
-  handleOpenInGitHub: () => void
-  handleOpenInEditor: () => void
-  handleDeleteWorktree: () => void
-  handleCreateFromBranch: () => void
-  handleNavigateToPR: () => void
+  handleOpenInGitHub: () => void;
+  handleOpenInEditor: () => void;
+  handleDeleteWorktree: () => void;
+  handleCreateFromBranch: () => void;
+  handleNavigateToPR: () => void;
 }
 
 export const useWorktreeActions = ({
@@ -27,40 +27,40 @@ export const useWorktreeActions = ({
   onDeleteWorktree,
   onCreateFromBranch,
   onNavigateToPR,
-  matchingPR
+  matchingPR,
 }: UseWorktreeActionsProps): UseWorktreeActionsReturn => {
   const handleOpenInGitHub = useCallback(() => {
     if (worktree.repoFullName) {
-      const url = `https://github.com/${worktree.repoFullName}/tree/${worktree.branch}`
-      window.open(url, '_blank')
+      const url = `https://github.com/${worktree.repoFullName}/tree/${worktree.branch}`;
+      window.open(url, "_blank");
     }
-  }, [worktree.repoFullName, worktree.branch])
+  }, [worktree.repoFullName, worktree.branch]);
 
   const handleOpenInEditor = useCallback(() => {
-    const url = generateEditorUrl(editorConfig, worktree.path)
-    window.open(url, '_blank')
-  }, [editorConfig, worktree.path])
+    const url = generateEditorUrl(editorConfig, worktree.path);
+    window.open(url, "_blank");
+  }, [editorConfig, worktree.path]);
 
   const handleDeleteWorktree = useCallback(() => {
-    onDeleteWorktree(worktree)
-  }, [worktree, onDeleteWorktree])
+    onDeleteWorktree(worktree);
+  }, [worktree, onDeleteWorktree]);
 
   const handleCreateFromBranch = useCallback(() => {
-    const repoName = worktree.repoFullName || worktree.repoName
-    onCreateFromBranch(repoName, worktree.branch)
-  }, [worktree, onCreateFromBranch])
+    const repoName = worktree.repoFullName || worktree.repoName;
+    onCreateFromBranch(repoName, worktree.branch);
+  }, [worktree, onCreateFromBranch]);
 
   const handleNavigateToPR = useCallback(() => {
     if (matchingPR && onNavigateToPR) {
-      onNavigateToPR(matchingPR.number, matchingPR.repository)
+      onNavigateToPR(matchingPR.number, matchingPR.repository);
     }
-  }, [matchingPR, onNavigateToPR])
+  }, [matchingPR, onNavigateToPR]);
 
   return {
     handleOpenInGitHub,
     handleOpenInEditor,
     handleDeleteWorktree,
     handleCreateFromBranch,
-    handleNavigateToPR
-  }
-}
+    handleNavigateToPR,
+  };
+};

@@ -1,31 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getConfig, updateConfig } from '@/lib/config'
+import { NextRequest, NextResponse } from "next/server";
+import { getConfig, updateConfig } from "@/lib/config";
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const config = await getConfig()
-    return NextResponse.json(config)
+    const config = await getConfig();
+    return NextResponse.json(config);
   } catch (error) {
-    console.error('Failed to get config:', error)
+    console.error("Failed to get config:", error);
     return NextResponse.json(
-      { error: 'Failed to get configuration' },
-      { status: 500 }
-    )
+      { error: "Failed to get configuration" },
+      { status: 500 },
+    );
   }
 }
 
 export async function PATCH(request: NextRequest) {
   try {
-    const updates = await request.json()
-    const config = await updateConfig(updates)
-    return NextResponse.json(config)
+    const updates = await request.json();
+    const config = await updateConfig(updates);
+    return NextResponse.json(config);
   } catch (error) {
-    console.error('Failed to update config:', error)
+    console.error("Failed to update config:", error);
     return NextResponse.json(
-      { error: 'Failed to update configuration' },
-      { status: 500 }
-    )
+      { error: "Failed to update configuration" },
+      { status: 500 },
+    );
   }
 }

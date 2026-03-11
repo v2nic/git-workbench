@@ -1,14 +1,14 @@
-import React from 'react'
-import { Worktree } from '@/types/worktrees'
+import React from "react";
+import { Worktree } from "@/types/worktrees";
 
 interface WorktreeHeaderProps {
-  worktree: Worktree
-  worktreeName: string
+  worktree: Worktree;
+  worktreeName: string;
 }
 
 export const WorktreeHeader: React.FC<WorktreeHeaderProps> = ({
   worktree,
-  worktreeName
+  worktreeName,
 }) => {
   return (
     <div className="flex items-center space-x-2">
@@ -20,5 +20,5 @@ export const WorktreeHeader: React.FC<WorktreeHeaderProps> = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

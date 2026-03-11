@@ -1,22 +1,33 @@
-import React, { memo, useCallback, useState, useEffect, useRef } from 'react'
-import { Repo } from '@/types/repos'
-import { Button } from './ui/Button'
-import { Star, GitBranchPlus, GitBranch, Download, MoreVertical, Trash2, GitPullRequest, Upload, Plus, FolderTree } from 'lucide-react'
-import { PublishRepoModal } from './PublishRepoModal'
-import clsx from 'clsx'
+import React, { memo, useCallback, useState, useEffect, useRef } from "react";
+import { Repo } from "@/types/repos";
+import { Button } from "./ui/Button";
+import {
+  Star,
+  GitBranchPlus,
+  GitBranch,
+  Download,
+  MoreVertical,
+  Trash2,
+  GitPullRequest,
+  Upload,
+  Plus,
+  FolderTree,
+} from "lucide-react";
+import { PublishRepoModal } from "./PublishRepoModal";
+import clsx from "clsx";
 
 interface RepoRowProps {
-  repo: Repo
-  onToggleFavorite: (repoName: string) => void
-  onJumpToWorktrees: (repoName: string) => void
-  onCreateWorktree: (repoName: string) => void
-  onCloneRepo?: (repoName: string) => void
-  onDeleteRepo?: (repoName: string) => void
-  onJumpToPullRequests?: (repoName: string) => void
-  onJumpToBranches?: (repoName: string) => void
-  onPublishRepo?: (repoName: string) => void
-  onTrackRepo?: (repoName: string) => void
-  needsClone?: boolean
+  repo: Repo;
+  onToggleFavorite: (repoName: string) => void;
+  onJumpToWorktrees: (repoName: string) => void;
+  onCreateWorktree: (repoName: string) => void;
+  onCloneRepo?: (repoName: string) => void;
+  onDeleteRepo?: (repoName: string) => void;
+  onJumpToPullRequests?: (repoName: string) => void;
+  onJumpToBranches?: (repoName: string) => void;
+  onPublishRepo?: (repoName: string) => void;
+  onTrackRepo?: (repoName: string) => void;
+  needsClone?: boolean;
 }
 
 export const RepoRow = memo(function RepoRow({
@@ -30,118 +41,126 @@ export const RepoRow = memo(function RepoRow({
   onJumpToBranches,
   onPublishRepo,
   onTrackRepo,
-  needsClone
+  needsClone,
 }: RepoRowProps) {
-  const [showMenu, setShowMenu] = useState(false)
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [showPublishModal, setShowPublishModal] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
+  const [showMenu, setShowMenu] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowMenu(false)
+        setShowMenu(false);
       }
-    }
+    };
 
     if (showMenu) {
-      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [showMenu])
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showMenu]);
   const handleToggleFavorite = useCallback(() => {
-    onToggleFavorite(repo.repoName)
-  }, [repo.repoName, onToggleFavorite])
+    onToggleFavorite(repo.repoName);
+  }, [repo.repoName, onToggleFavorite]);
 
   const handleJumpToWorktrees = useCallback(() => {
-    onJumpToWorktrees(repo.repoName)
-  }, [repo.repoName, onJumpToWorktrees])
+    onJumpToWorktrees(repo.repoName);
+  }, [repo.repoName, onJumpToWorktrees]);
 
   const handleCreateWorktree = useCallback(() => {
-    onCreateWorktree(repo.repoName)
-  }, [repo.repoName, onCreateWorktree])
+    onCreateWorktree(repo.repoName);
+  }, [repo.repoName, onCreateWorktree]);
 
   const handleCloneRepo = useCallback(() => {
     if (onCloneRepo) {
-      onCloneRepo(repo.repoName)
+      onCloneRepo(repo.repoName);
     }
-  }, [repo.repoName, onCloneRepo])
+  }, [repo.repoName, onCloneRepo]);
 
   const handleDeleteRepo = useCallback(() => {
     if (onDeleteRepo) {
-      onDeleteRepo(repo.repoName)
-      setShowDeleteDialog(false)
-      setShowMenu(false)
+      onDeleteRepo(repo.repoName);
+      setShowDeleteDialog(false);
+      setShowMenu(false);
     }
-  }, [repo.repoName, onDeleteRepo])
+  }, [repo.repoName, onDeleteRepo]);
 
   const handleMenuToggle = useCallback(() => {
-    setShowMenu(!showMenu)
-  }, [showMenu])
+    setShowMenu(!showMenu);
+  }, [showMenu]);
 
   const handleDeleteClick = useCallback(() => {
-    setShowDeleteDialog(true)
-    setShowMenu(false)
-  }, [])
+    setShowDeleteDialog(true);
+    setShowMenu(false);
+  }, []);
 
   const handleJumpToPullRequests = useCallback(() => {
     if (onJumpToPullRequests) {
-      onJumpToPullRequests(repo.fullName || repo.repoName)
+      onJumpToPullRequests(repo.fullName || repo.repoName);
     }
-  }, [repo.fullName, repo.repoName, onJumpToPullRequests])
+  }, [repo.fullName, repo.repoName, onJumpToPullRequests]);
 
   const handleJumpToBranches = useCallback(() => {
     if (onJumpToBranches) {
-      onJumpToBranches(repo.repoName)
+      onJumpToBranches(repo.repoName);
     }
-  }, [repo.repoName, onJumpToBranches])
+  }, [repo.repoName, onJumpToBranches]);
 
   const handlePublishRepo = useCallback(() => {
-    setShowPublishModal(true)
-  }, [])
+    setShowPublishModal(true);
+  }, []);
 
   const handleTrackRepo = useCallback(() => {
     if (onTrackRepo) {
-      onTrackRepo(repo.repoName)
+      onTrackRepo(repo.repoName);
     }
-  }, [repo.repoName, onTrackRepo])
+  }, [repo.repoName, onTrackRepo]);
 
-  const handlePublishSuccess = useCallback((sshUrl: string) => {
-    setShowPublishModal(false)
-    if (onPublishRepo) {
-      onPublishRepo(repo.repoName)
-    }
-  }, [repo.repoName, onPublishRepo])
+  const handlePublishSuccess = useCallback(
+    (sshUrl: string) => {
+      setShowPublishModal(false);
+      if (onPublishRepo) {
+        onPublishRepo(repo.repoName);
+      }
+    },
+    [repo.repoName, onPublishRepo],
+  );
 
   const handleClosePublishModal = useCallback(() => {
-    setShowPublishModal(false)
-  }, [])
+    setShowPublishModal(false);
+  }, []);
 
   const handleRepoNameClick = useCallback(() => {
     if (repo.remoteUrls && repo.remoteUrls.length > 0) {
-      const githubUrl = repo.remoteUrls.find(url => url.includes('github.com'))
+      const githubUrl = repo.remoteUrls.find((url) =>
+        url.includes("github.com"),
+      );
       if (githubUrl) {
         // Convert SSH URL to HTTPS URL if needed
-        let webUrl = githubUrl
-        if (githubUrl.startsWith('git@github.com:')) {
+        let webUrl = githubUrl;
+        if (githubUrl.startsWith("git@github.com:")) {
           webUrl = githubUrl
-            .replace('git@github.com:', 'https://github.com/')
-            .replace('.git', '')
-        } else if (githubUrl.startsWith('git://github.com/')) {
+            .replace("git@github.com:", "https://github.com/")
+            .replace(".git", "");
+        } else if (githubUrl.startsWith("git://github.com/")) {
           webUrl = githubUrl
-            .replace('git://github.com/', 'https://github.com/')
-            .replace('.git', '')
-        } else if (githubUrl.startsWith('https://github.com/') && githubUrl.endsWith('.git')) {
-          webUrl = githubUrl.replace('.git', '')
+            .replace("git://github.com/", "https://github.com/")
+            .replace(".git", "");
+        } else if (
+          githubUrl.startsWith("https://github.com/") &&
+          githubUrl.endsWith(".git")
+        ) {
+          webUrl = githubUrl.replace(".git", "");
         }
-        window.open(webUrl, '_blank')
+        window.open(webUrl, "_blank");
       }
     }
-  }, [repo.remoteUrls])
+  }, [repo.remoteUrls]);
 
   return (
     <div className="border-b p-4 hover:bg-muted/50 transition-colors">
@@ -152,16 +171,24 @@ export const RepoRow = memo(function RepoRow({
             size="sm"
             onClick={handleToggleFavorite}
             className="text-muted-foreground hover:text-yellow-500"
-            aria-label={repo.favorite ? 'Remove from favorites' : 'Add to favorites'}
+            aria-label={
+              repo.favorite ? "Remove from favorites" : "Add to favorites"
+            }
           >
-            <Star className={clsx('w-5 h-5', repo.favorite && 'fill-yellow-500 text-yellow-500')} />
-          </Button>
-          
-          <div>
-            <h3 
+            <Star
               className={clsx(
-                'font-medium cursor-pointer transition-colors',
-                repo.remoteUrls?.some(url => url.includes('github.com')) && 'hover:text-blue-600'
+                "w-5 h-5",
+                repo.favorite && "fill-yellow-500 text-yellow-500",
+              )}
+            />
+          </Button>
+
+          <div>
+            <h3
+              className={clsx(
+                "font-medium cursor-pointer transition-colors",
+                repo.remoteUrls?.some((url) => url.includes("github.com")) &&
+                  "hover:text-blue-600",
               )}
               onClick={handleRepoNameClick}
             >
@@ -174,13 +201,15 @@ export const RepoRow = memo(function RepoRow({
         </div>
 
         <div className="flex items-center space-x-2">
-          <span className={clsx(
-            'px-2 py-1 text-xs rounded-full',
-            repo.tracked 
-              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-              : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-          )}>
-            {repo.tracked ? 'Tracked' : 'Discovered'}
+          <span
+            className={clsx(
+              "px-2 py-1 text-xs rounded-full",
+              repo.tracked
+                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+            )}
+          >
+            {repo.tracked ? "Tracked" : "Discovered"}
           </span>
 
           {/* Show Track button if repo is untracked */}
@@ -222,20 +251,12 @@ export const RepoRow = memo(function RepoRow({
             </Button>
           )}
 
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleJumpToWorktrees}
-          >
+          <Button variant="secondary" size="sm" onClick={handleJumpToWorktrees}>
             <FolderTree className="w-4 h-4 mr-1" />
             Worktrees
           </Button>
 
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleJumpToBranches}
-          >
+          <Button variant="secondary" size="sm" onClick={handleJumpToBranches}>
             <GitBranch className="w-4 h-4 mr-1" />
             Branches
           </Button>
@@ -249,11 +270,7 @@ export const RepoRow = memo(function RepoRow({
             Pull Requests
           </Button>
 
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleCreateWorktree}
-          >
+          <Button variant="primary" size="sm" onClick={handleCreateWorktree}>
             <GitBranchPlus className="w-4 h-4 mr-1" />
             Create worktree
           </Button>
@@ -287,17 +304,18 @@ export const RepoRow = memo(function RepoRow({
 
       {/* Delete confirmation dialog */}
       {showDeleteDialog && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
           onClick={() => setShowDeleteDialog(false)}
         >
-          <div 
+          <div
             className="bg-background border rounded-lg shadow-lg p-6 max-w-md w-full mx-4"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold mb-2">Delete Repository</h3>
             <p className="text-muted-foreground mb-6">
-              Are you sure you want to delete &quot;{repo.repoName}&quot;? This action cannot be undone.
+              Are you sure you want to delete &quot;{repo.repoName}&quot;? This
+              action cannot be undone.
             </p>
             <div className="flex justify-end space-x-3">
               <Button
@@ -306,10 +324,7 @@ export const RepoRow = memo(function RepoRow({
               >
                 Cancel
               </Button>
-              <Button
-                onClick={handleDeleteRepo}
-                variant="destructive"
-              >
+              <Button onClick={handleDeleteRepo} variant="destructive">
                 Delete
               </Button>
             </div>
@@ -323,12 +338,12 @@ export const RepoRow = memo(function RepoRow({
           repo={{
             repoName: repo.repoName,
             fullName: repo.fullName,
-            barePath: repo.barePath
+            barePath: repo.barePath,
           }}
           onClose={handleClosePublishModal}
           onSuccess={handlePublishSuccess}
         />
       )}
     </div>
-  )
-})
+  );
+});

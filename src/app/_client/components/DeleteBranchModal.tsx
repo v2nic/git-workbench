@@ -1,15 +1,20 @@
-import React, { useState, useCallback } from 'react'
-import { Branch } from '@/types/branches'
-import { Modal } from './ui/Modal'
-import { Button } from './ui/Button'
-import { AlertTriangle } from 'lucide-react'
+import React, { useState, useCallback } from "react";
+import { Branch } from "@/types/branches";
+import { Modal } from "./ui/Modal";
+import { Button } from "./ui/Button";
+import { AlertTriangle } from "lucide-react";
 
 interface DeleteBranchModalProps {
-  isOpen: boolean
-  onClose: () => void
-  branch: Branch | null
-  onConfirm: (branch: Branch, deleteLocal: boolean, deleteRemote: boolean, force: boolean) => void
-  isLoading: boolean
+  isOpen: boolean;
+  onClose: () => void;
+  branch: Branch | null;
+  onConfirm: (
+    branch: Branch,
+    deleteLocal: boolean,
+    deleteRemote: boolean,
+    force: boolean,
+  ) => void;
+  isLoading: boolean;
 }
 
 export function DeleteBranchModal({
@@ -19,31 +24,30 @@ export function DeleteBranchModal({
   onConfirm,
   isLoading,
 }: DeleteBranchModalProps) {
-  const [deleteRemote, setDeleteRemote] = useState(false)
-  const [forceDelete, setForceDelete] = useState(false)
+  const [deleteRemote, setDeleteRemote] = useState(false);
+  const [forceDelete, setForceDelete] = useState(false);
 
   const handleConfirm = useCallback(() => {
-    if (!branch) return
+    if (!branch) return;
 
-    const deleteLocal = branch.isLocal
-    const shouldDeleteRemote = branch.isRemote && !branch.isLocal
-      ? true
-      : deleteRemote
+    const deleteLocal = branch.isLocal;
+    const shouldDeleteRemote =
+      branch.isRemote && !branch.isLocal ? true : deleteRemote;
 
-    onConfirm(branch, deleteLocal, shouldDeleteRemote, forceDelete)
-  }, [branch, deleteRemote, forceDelete, onConfirm])
+    onConfirm(branch, deleteLocal, shouldDeleteRemote, forceDelete);
+  }, [branch, deleteRemote, forceDelete, onConfirm]);
 
   const handleClose = useCallback(() => {
-    setDeleteRemote(false)
-    setForceDelete(false)
-    onClose()
-  }, [onClose])
+    setDeleteRemote(false);
+    setForceDelete(false);
+    onClose();
+  }, [onClose]);
 
-  if (!branch) return null
+  if (!branch) return null;
 
-  const isLocalOnly = branch.isLocal && !branch.isRemote
-  const isRemoteOnly = !branch.isLocal && branch.isRemote
-  const isBoth = branch.isLocal && branch.isRemote
+  const isLocalOnly = branch.isLocal && !branch.isRemote;
+  const isRemoteOnly = !branch.isLocal && branch.isRemote;
+  const isBoth = branch.isLocal && branch.isRemote;
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Delete Branch">
@@ -63,7 +67,8 @@ export function DeleteBranchModal({
         {isLocalOnly && !branch.isMergedToMain && (
           <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3">
             <p className="text-sm text-yellow-800 dark:text-yellow-200">
-              This branch has not been merged to the default branch. Deleting it may result in lost work.
+              This branch has not been merged to the default branch. Deleting it
+              may result in lost work.
             </p>
           </div>
         )}
@@ -77,7 +82,8 @@ export function DeleteBranchModal({
         {isRemoteOnly && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
             <p className="text-sm text-red-800 dark:text-red-200">
-              This will delete the remote branch from the server. This action cannot be undone.
+              This will delete the remote branch from the server. This action
+              cannot be undone.
             </p>
           </div>
         )}
@@ -86,7 +92,8 @@ export function DeleteBranchModal({
           <>
             <p className="text-sm text-muted-foreground">
               This branch exists both locally and on the remote.
-              {!branch.isMergedToMain && ' It has not been merged to the default branch.'}
+              {!branch.isMergedToMain &&
+                " It has not been merged to the default branch."}
             </p>
 
             <label className="flex items-center space-x-2 cursor-pointer">
@@ -96,7 +103,9 @@ export function DeleteBranchModal({
                 onChange={(e) => setDeleteRemote(e.target.checked)}
                 className="rounded border-gray-300"
               />
-              <span className="text-sm">Also delete the remote branch (cannot be undone)</span>
+              <span className="text-sm">
+                Also delete the remote branch (cannot be undone)
+              </span>
             </label>
           </>
         )}
@@ -114,18 +123,25 @@ export function DeleteBranchModal({
         )}
 
         <div className="flex justify-end space-x-3 pt-2">
-          <Button variant="secondary" onClick={handleClose} disabled={isLoading}>
+          <Button
+            variant="secondary"
+            onClick={handleClose}
+            disabled={isLoading}
+          >
             Cancel
           </Button>
           <Button
             variant="destructive"
             onClick={handleConfirm}
-            disabled={isLoading || (isLocalOnly && !branch.isMergedToMain && !forceDelete)}
+            disabled={
+              isLoading ||
+              (isLocalOnly && !branch.isMergedToMain && !forceDelete)
+            }
           >
-            {isLoading ? 'Deleting...' : 'Delete'}
+            {isLoading ? "Deleting..." : "Delete"}
           </Button>
         </div>
       </div>
     </Modal>
-  )
+  );
 }

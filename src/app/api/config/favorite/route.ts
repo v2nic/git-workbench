@@ -1,26 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { toggleFavorite } from '@/lib/config'
+import { NextRequest, NextResponse } from "next/server";
+import { toggleFavorite } from "@/lib/config";
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
-    const { repoNameOrId } = await request.json()
+    const { repoNameOrId } = await request.json();
 
     if (!repoNameOrId) {
       return NextResponse.json(
-        { error: 'repoNameOrId is required' },
-        { status: 400 }
-      )
+        { error: "repoNameOrId is required" },
+        { status: 400 },
+      );
     }
 
-    const config = await toggleFavorite(repoNameOrId)
-    return NextResponse.json(config)
+    const config = await toggleFavorite(repoNameOrId);
+    return NextResponse.json(config);
   } catch (error) {
-    console.error('Failed to toggle favorite:', error)
+    console.error("Failed to toggle favorite:", error);
     return NextResponse.json(
-      { error: 'Failed to toggle favorite' },
-      { status: 500 }
-    )
+      { error: "Failed to toggle favorite" },
+      { status: 500 },
+    );
   }
 }

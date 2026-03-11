@@ -19,6 +19,7 @@ Git Workbench is a modern web application that streamlines Git repository manage
 ## ✨ Key Features
 
 ### 🗂️ **Repository Management**
+
 - **Centralized Repository Tracking**: Track all your Git repositories in one place with a clean JSON configuration
 - **Smart Discovery**: Automatically discovers repositories in your configured directories
 - **Repository Creation**: Create new repositories with cute auto-generated names (e.g., "happy-purple-dragon")
@@ -26,6 +27,7 @@ Git Workbench is a modern web application that streamlines Git repository manage
 - **Publish Repositories**: Easily publish local repositories to GitHub
 
 ### 🌳 **Advanced Worktree Management**
+
 - **Create Worktrees**: Generate worktrees from any branch or commit with custom names
 - **Branch-Based Creation**: Create worktrees directly from existing branches
 - **Smart Branch Detection**: Automatically identifies associated branches for each worktree
@@ -33,6 +35,7 @@ Git Workbench is a modern web application that streamlines Git repository manage
 - **Real-time Status**: See clean, dirty, or conflicted states at a glance
 
 ### 🔗 **Deep GitHub Integration**
+
 - **Pull Request Tracking**: View PRs across all repositories with status indicators
 - **Branch-to-PR Mapping**: Automatically link worktrees to their corresponding pull requests
 - **GitHub Authentication**: Secure integration using GitHub CLI (`gh`)
@@ -40,18 +43,21 @@ Git Workbench is a modern web application that streamlines Git repository manage
 - **PR Navigation**: Jump directly to worktrees for specific PRs
 
 ### ⭐ **Favorites & Organization**
+
 - **Favorites System**: Mark frequently used repositories as favorites for quick access
 - **Smart Filtering**: Filter worktrees, branches, and PRs by repository
 - **Search Functionality**: Quick search across repositories and worktrees
 - **Tabbed Interface**: Organized views for repositories, favorites, worktrees, branches, and PRs
 
 ### 🛠️ **Editor Integration**
+
 - **Multi-Editor Support**: Works with VS Code, Windsurf, Cursor, and custom editors
 - **Configurable Schemes**: Support for custom URL schemes and commands
 - **One-Click Opening**: Open worktrees directly in your preferred editor
 - **Icon Customization**: Choose appropriate icons for different editors
 
 ### 📊 **Real-Time Information**
+
 - **Git Status Display**: See staged, modified, and untracked files instantly
 - **Branch Information**: Track current branch and available branches
 - **Repository Health**: Monitor repository status and synchronization
@@ -62,6 +68,7 @@ Git Workbench is a modern web application that streamlines Git repository manage
 ## 🏗️ Architecture & Tech Stack
 
 ### Frontend
+
 - **Next.js 14** with App Router for modern React development
 - **TypeScript** for type safety and better developer experience
 - **Tailwind CSS** with custom design system for beautiful UI
@@ -69,18 +76,21 @@ Git Workbench is a modern web application that streamlines Git repository manage
 - **SWR** for efficient data fetching and caching
 
 ### Backend & API
+
 - **Next.js API Routes** for RESTful endpoints
 - **Git Operations** using native Git commands
 - **GitHub CLI Integration** for GitHub API access
 - **JSON Configuration** for simple and portable setup
 
 ### Testing & Quality
+
 - **Vitest** with React Testing Library for comprehensive testing
 - **ESLint** for code quality and consistency
 - **TypeScript** for static type checking
 - **Docker** for containerized deployment
 
 ### Deployment
+
 - **Docker Compose** for easy setup and deployment
 - **Alpine Linux** for lightweight and secure containers
 - **Volume Mounting** for persistent data and configuration
@@ -91,18 +101,21 @@ Git Workbench is a modern web application that streamlines Git repository manage
 ### 🐳 Using Docker Compose (Recommended)
 
 1. **Create bare repository**:
+
    ```bash
    mkdir -p ~/git-root
    git clone --bare https://github.com/v2nic/git-workbench.git ~/git-root/git-workbench.git
    ```
 
 2. **Create main worktree**:
+
    ```bash
    git --git-dir ~/git-root/git-workbench.git worktree add ~/Source/git-workbench/main main
    ```
 
 3. **Configure your paths**:
    Edit `docker-compose.yml` to mount your source directories:
+
    ```yaml
    volumes:
      - /path/to/your/source:/home/node/Source
@@ -110,6 +123,7 @@ Git Workbench is a modern web application that streamlines Git repository manage
    ```
 
 4. **Start the application**:
+
    ```bash
    cd ~/Source/git-workbench/main
    docker compose up -d
@@ -125,16 +139,18 @@ Git Workbench is a modern web application that streamlines Git repository manage
 ### 💻 Local Development
 
 1. **Prerequisites**:
-   - Node.js 18+ 
+   - Node.js 18+
    - Git
    - GitHub CLI (`gh`) for GitHub integration
 
 2. **Install dependencies**:
+
    ```bash
    npm install
    ```
 
 3. **Run the development server**:
+
    ```bash
    npm run dev
    ```
@@ -178,6 +194,7 @@ The application uses a JSON configuration file to track repositories and setting
 Configure your preferred editor for opening worktrees:
 
 #### VS Code (Default)
+
 ```json
 {
   "editor": {
@@ -189,10 +206,11 @@ Configure your preferred editor for opening worktrees:
 ```
 
 #### Windsurf
+
 ```json
 {
   "editor": {
-    "name": "Windsurf", 
+    "name": "Windsurf",
     "scheme": "windsurf",
     "icon": "FolderOpen"
   }
@@ -200,17 +218,19 @@ Configure your preferred editor for opening worktrees:
 ```
 
 #### Cursor
+
 ```json
 {
   "editor": {
     "name": "Cursor",
-    "scheme": "cursor", 
+    "scheme": "cursor",
     "icon": "Cpu"
   }
 }
 ```
 
 #### Custom Command
+
 ```json
 {
   "editor": {
@@ -221,6 +241,7 @@ Configure your preferred editor for opening worktrees:
 ```
 
 **Available Editor Options**:
+
 - `name`: Display name for UI elements
 - `scheme`: URL scheme (e.g., `vscode`, `windsurf`, `cursor`)
 - `icon`: Lucide icon name (`Code`, `Folder`, `FolderOpen`, `Cpu`, `Terminal`, `FileText`, `Edit3`, `PenTool`)
@@ -231,11 +252,13 @@ Configure your preferred editor for opening worktrees:
 ## 🔌 API Reference
 
 ### Configuration Management
+
 - `GET /api/config` - Retrieve current configuration
 - `PATCH /api/config` - Update configuration settings
 - `POST /api/config/favorite` - Toggle repository favorite status
 
 ### Repository Operations
+
 - `GET /api/repos` - List all repositories (tracked + discovered)
 - `POST /api/repos/create` - Create new repository
 - `POST /api/repos/clone` - Clone repository from URL
@@ -244,6 +267,7 @@ Configure your preferred editor for opening worktrees:
 - `DELETE /api/repos/delete` - Delete repository
 
 ### Worktree Management
+
 - `GET /api/worktrees` - List all worktrees with status
 - `POST /api/worktrees/create` - Create new worktree
 - `POST /api/worktrees/create-from-branch` - Create worktree from existing branch
@@ -251,10 +275,12 @@ Configure your preferred editor for opening worktrees:
 - `DELETE /api/worktrees/delete` - Delete worktree
 
 ### Branch Operations
+
 - `GET /api/branches` - List all branches across repositories
 - `DELETE /api/branches/delete` - Delete branch
 
 ### GitHub Integration
+
 - `GET /api/github/auth/status` - Check GitHub authentication status
 - `GET /api/github/search-repos` - Search GitHub repositories
 - `GET /api/github/pr` - Get pull requests for repository/branch
@@ -262,6 +288,7 @@ Configure your preferred editor for opening worktrees:
 - `GET /api/pull-requests/stream` - Stream pull request updates
 
 ### System
+
 - `GET /api/health` - Health check endpoint
 - `GET /api/user` - Get current user information
 
@@ -331,11 +358,11 @@ docker compose up --build
 
 ### 🌍 Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
+| Variable           | Default             | Description                       |
+| ------------------ | ------------------- | --------------------------------- |
 | `SOURCE_BASE_PATH` | `/home/node/Source` | Base path for source repositories |
-| `NODE_ENV` | `production` | Node environment |
-| `APP_DATA_PATH` | `/app/data` | Path for application data |
+| `NODE_ENV`         | `production`        | Node environment                  |
+| `APP_DATA_PATH`    | `/app/data`         | Path for application data         |
 
 ### 🔐 GitHub Authentication
 
@@ -355,8 +382,9 @@ For full GitHub integration, authenticate with GitHub CLI:
 ### 📁 Port Information
 
 The application uses port **2624**, chosen using the telephone keypad standard for "BNCH" (Bench):
+
 - **B** = 2
-- **N** = 6  
+- **N** = 6
 - **C** = 2
 - **H** = 4
 
@@ -371,7 +399,7 @@ We welcome contributions! Here's how to get started:
 1. **Fork the repository** on GitHub
 2. **Add your fork to Git Workbench**:
    ```bash
-   # In Git Workbench web interface, click "Add Repository" 
+   # In Git Workbench web interface, click "Add Repository"
    # Enter your fork URL: https://github.com/yourusername/git-workbench.git
    ```
 3. **Create a feature worktree**:
@@ -417,6 +445,7 @@ We welcome contributions! Here's how to get started:
 ### 🐛 Bug Reports
 
 When reporting bugs, please include:
+
 - **Environment details** (OS, Node.js version, Docker version)
 - **Steps to reproduce** the issue
 - **Expected vs actual behavior**
@@ -435,7 +464,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 - **Next.js Team** - For the excellent React framework
 - **Tailwind CSS** - For the utility-first CSS framework
-- **GitHub CLI** - For seamless GitHub integration  
+- **GitHub CLI** - For seamless GitHub integration
 - **Vercel** - For hosting and deployment inspiration
 - **Open Source Community** - For the amazing tools and libraries
 

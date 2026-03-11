@@ -1,12 +1,12 @@
-import { Metadata } from 'next'
-import AppShell from '../_client/AppShell'
+import { Metadata } from "next";
+import AppShell from "../_client/AppShell";
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: 'Pull Requests'
-}
+  title: "Pull Requests",
+};
 
 export default function PullRequestsPage() {
-  return <AppShell />
+  return <AppShell />;
 }

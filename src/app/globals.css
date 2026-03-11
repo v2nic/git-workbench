@@ -149,28 +149,28 @@
   .animate-pr-glow {
     animation: pr-glow 4s ease-out;
   }
-  
+
   .animate-worktree-highlight-1 {
     animation: worktree-highlight-pulse-1 1s ease-in-out;
   }
-  
+
   .animate-worktree-highlight-2 {
     animation: worktree-highlight-pulse-2 2s ease-in-out;
   }
-  
+
   .animate-worktree-highlight-3 {
     animation: worktree-highlight-pulse-3 3s ease-in-out;
   }
-  
+
   .animate-worktree-highlight-settle {
     animation: worktree-highlight-settle 0.5s ease-in-out;
   }
-  
+
   .worktree-highlight-permanent {
     border-left: 4px solid rgb(59, 130, 246);
     background-color: rgba(59, 130, 246, 0.05);
   }
-  
+
   .worktree-highlight-permanent-dark {
     border-left: 4px solid rgb(96, 165, 250);
     background-color: rgba(96, 165, 250, 0.1);

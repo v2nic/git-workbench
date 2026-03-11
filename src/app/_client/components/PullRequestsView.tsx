@@ -1,234 +1,295 @@
-import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
-import { usePullRequests } from '../data/usePullRequests'
-import { useConfig } from '../data/useConfig'
-import { useWorktrees } from '../data/useWorktrees'
-import { PRRow } from './PRRow'
-import { FilterBanner } from './FilterBanner'
-import { RepositoryHeader } from './RepositoryHeader'
-import { DeleteWorktreeModal } from './DeleteWorktreeModal'
-import { Button } from './ui/Button'
-import { Input } from './ui/Input'
-import { GitPullRequest, CheckCircle, Users, AlertTriangle, XCircle, RefreshCw } from 'lucide-react'
-import { PRNotification } from '@/types/github'
-import { Worktree, WorktreeStatus } from '@/types/worktrees'
-import clsx from 'clsx'
+import React, {
+  useMemo,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
+import { usePullRequests } from "../data/usePullRequests";
+import { useConfig } from "../data/useConfig";
+import { useWorktrees } from "../data/useWorktrees";
+import { PRRow } from "./PRRow";
+import { FilterBanner } from "./FilterBanner";
+import { RepositoryHeader } from "./RepositoryHeader";
+import { DeleteWorktreeModal } from "./DeleteWorktreeModal";
+import { Button } from "./ui/Button";
+import { Input } from "./ui/Input";
+import {
+  GitPullRequest,
+  CheckCircle,
+  Users,
+  AlertTriangle,
+  XCircle,
+  RefreshCw,
+} from "lucide-react";
+import { PRNotification } from "@/types/github";
+import { Worktree, WorktreeStatus } from "@/types/worktrees";
+import clsx from "clsx";
 
-type GroupBy = 'none' | 'repository' | 'reason'
-type StatusFilter = 'all' | 'ready' | 'draft'
+type GroupBy = "none" | "repository" | "reason";
+type StatusFilter = "all" | "ready" | "draft";
 
 interface PullRequestsViewProps {
-  onCreateWorktree?: (repoName: string) => void
-  onCreateFromBranch?: (repoName: string, branchName: string) => void
-  onSuccess?: (message: string) => void
-  onError?: (message: string) => void
-  highlightPRNumber?: number
-  highlightPRRepository?: string
-  filterRepo?: string
-  onClearFilter?: () => void
-  onFilterByRepository?: (repoName: string) => void
+  onCreateWorktree?: (repoName: string) => void;
+  onCreateFromBranch?: (repoName: string, branchName: string) => void;
+  onSuccess?: (message: string) => void;
+  onError?: (message: string) => void;
+  highlightPRNumber?: number;
+  highlightPRRepository?: string;
+  filterRepo?: string;
+  onClearFilter?: () => void;
+  onFilterByRepository?: (repoName: string) => void;
 }
 
-export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSuccess, onError, highlightPRNumber, highlightPRRepository, filterRepo, onClearFilter, onFilterByRepository }: PullRequestsViewProps) {
-  const { pullRequests, isLoading, error, cached, rateLimited, timestamp, retryInSeconds, errorMessage, updateAvailable, refreshPullRequests } = usePullRequests()
-  const { config } = useConfig()
-  const { worktrees, mutate: mutateWorktrees } = useWorktrees()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [groupBy, setGroupBy] = useState<GroupBy>('repository')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ready')
-  const [animatingPRKey, setAnimatingPRKey] = useState<string | null>(null)
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-  const [pendingDeletePR, setPendingDeletePR] = useState<PRNotification | null>(null)
-  const [pendingDeleteStatus, setPendingDeleteStatus] = useState<WorktreeStatus | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const prRowRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+export function PullRequestsView({
+  onCreateWorktree,
+  onCreateFromBranch,
+  onSuccess,
+  onError,
+  highlightPRNumber,
+  highlightPRRepository,
+  filterRepo,
+  onClearFilter,
+  onFilterByRepository,
+}: PullRequestsViewProps) {
+  const {
+    pullRequests,
+    isLoading,
+    error,
+    cached,
+    rateLimited,
+    timestamp,
+    retryInSeconds,
+    errorMessage,
+    updateAvailable,
+    refreshPullRequests,
+  } = usePullRequests();
+  const { config } = useConfig();
+  const { worktrees, mutate: mutateWorktrees } = useWorktrees();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [groupBy, setGroupBy] = useState<GroupBy>("repository");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ready");
+  const [animatingPRKey, setAnimatingPRKey] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [pendingDeletePR, setPendingDeletePR] = useState<PRNotification | null>(
+    null,
+  );
+  const [pendingDeleteStatus, setPendingDeleteStatus] =
+    useState<WorktreeStatus | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const prRowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  const retryLabel = retryInSeconds ?? 10
+  const retryLabel = retryInSeconds ?? 10;
 
   useEffect(() => {
     if (highlightPRNumber && highlightPRRepository) {
-      const prKey = `${highlightPRRepository}-${highlightPRNumber}`
-      setAnimatingPRKey(prKey)
-      
-      const prElement = prRowRefs.current.get(prKey)
+      const prKey = `${highlightPRRepository}-${highlightPRNumber}`;
+      setAnimatingPRKey(prKey);
+
+      const prElement = prRowRefs.current.get(prKey);
       if (prElement) {
         setTimeout(() => {
-          prElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }, 100)
+          prElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 100);
       }
-      
-      const animationDuration = 4000
+
+      const animationDuration = 4000;
       setTimeout(() => {
-        setAnimatingPRKey(null)
-      }, animationDuration)
+        setAnimatingPRKey(null);
+      }, animationDuration);
     }
-  }, [highlightPRNumber, highlightPRRepository])
+  }, [highlightPRNumber, highlightPRRepository]);
 
   // Filter and group pull requests
   const filteredAndGroupedPRs = useMemo(() => {
     // First, filter to show only open PRs (not merged or closed)
-    let filtered = pullRequests.filter(pr => pr.state === 'open' && !pr.merged)
+    let filtered = pullRequests.filter(
+      (pr) => pr.state === "open" && !pr.merged,
+    );
 
     // Apply repository filter if specified
     if (filterRepo) {
-      filtered = filtered.filter(pr => pr.repository === filterRepo)
+      filtered = filtered.filter((pr) => pr.repository === filterRepo);
     }
 
     // Apply status filter
-    if (statusFilter === 'ready') {
-      filtered = filtered.filter(pr => !pr.draft)
-    } else if (statusFilter === 'draft') {
-      filtered = filtered.filter(pr => pr.draft)
+    if (statusFilter === "ready") {
+      filtered = filtered.filter((pr) => !pr.draft);
+    } else if (statusFilter === "draft") {
+      filtered = filtered.filter((pr) => pr.draft);
     }
 
     // Apply search filter
     if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(pr => 
-        pr.title.toLowerCase().includes(query) ||
-        pr.repository.toLowerCase().includes(query) ||
-        pr.headRef.toLowerCase().includes(query) ||
-        pr.author.login.toLowerCase().includes(query) ||
-        pr.number.toString().includes(query)
-      )
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (pr) =>
+          pr.title.toLowerCase().includes(query) ||
+          pr.repository.toLowerCase().includes(query) ||
+          pr.headRef.toLowerCase().includes(query) ||
+          pr.author.login.toLowerCase().includes(query) ||
+          pr.number.toString().includes(query),
+      );
     }
 
     // Group PRs
-    if (groupBy === 'none') {
-      return { 'All Pull Requests': filtered }
+    if (groupBy === "none") {
+      return { "All Pull Requests": filtered };
     }
 
-    const grouped = new Map<string, PRNotification[]>()
-    
-    filtered.forEach(pr => {
-      let key: string
-      
+    const grouped = new Map<string, PRNotification[]>();
+
+    filtered.forEach((pr) => {
+      let key: string;
+
       switch (groupBy) {
-        case 'repository':
-          key = pr.repository
-          break
-        case 'reason':
-          key = pr.reason.charAt(0).toUpperCase() + pr.reason.slice(1).replace(/_/g, ' ')
-          break
+        case "repository":
+          key = pr.repository;
+          break;
+        case "reason":
+          key =
+            pr.reason.charAt(0).toUpperCase() +
+            pr.reason.slice(1).replace(/_/g, " ");
+          break;
         default:
-          key = 'Other'
+          key = "Other";
       }
-      
+
       if (!grouped.has(key)) {
-        grouped.set(key, [])
+        grouped.set(key, []);
       }
-      grouped.get(key)!.push(pr)
-    })
+      grouped.get(key)!.push(pr);
+    });
 
     // Sort groups by key (alphabetically) and PRs within each group by updated date
-    const result: Record<string, PRNotification[]> = {}
+    const result: Record<string, PRNotification[]> = {};
     Array.from(grouped.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .forEach(([key, prs]) => {
-        result[key] = prs.sort((a, b) => 
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        )
-      })
+        result[key] = prs.sort(
+          (a, b) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        );
+      });
 
-    return result
-  }, [pullRequests, searchQuery, groupBy, statusFilter, filterRepo])
+    return result;
+  }, [pullRequests, searchQuery, groupBy, statusFilter, filterRepo]);
 
   const handleCopyNumber = useCallback((number: number) => {
-    if (typeof window !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(number.toString())
-        .catch(err => console.error('Failed to copy PR number:', err))
+    if (typeof window !== "undefined" && navigator.clipboard) {
+      navigator.clipboard
+        .writeText(number.toString())
+        .catch((err) => console.error("Failed to copy PR number:", err));
     }
-  }, [])
+  }, []);
 
-  const handleDeleteWorktree = useCallback(async (pr: PRNotification) => {
-    const worktree = worktrees.find(w => w.branch === pr.headRef)
-    if (!worktree) return
+  const handleDeleteWorktree = useCallback(
+    async (pr: PRNotification) => {
+      const worktree = worktrees.find((w) => w.branch === pr.headRef);
+      if (!worktree) return;
 
-    try {
-      const response = await fetch('/api/worktrees/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          repo: worktree.repoFullName || worktree.repoName,
-          worktreePath: worktree.path,
-          expectedStatus: worktree.status
-        })
-      })
+      try {
+        const response = await fetch("/api/worktrees/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            repo: worktree.repoFullName || worktree.repoName,
+            worktreePath: worktree.path,
+            expectedStatus: worktree.status,
+          }),
+        });
 
-      if (!response.ok) {
-        const error = await response.json()
-        if (error.requiresConfirmation) {
-          setPendingDeletePR(pr)
-          setPendingDeleteStatus(error.status)
-          setDeleteModalOpen(true)
-          return
-        } else {
-          throw new Error(error.error)
+        if (!response.ok) {
+          const error = await response.json();
+          if (error.requiresConfirmation) {
+            setPendingDeletePR(pr);
+            setPendingDeleteStatus(error.status);
+            setDeleteModalOpen(true);
+            return;
+          } else {
+            throw new Error(error.error);
+          }
         }
-      }
 
-      mutateWorktrees()
-      onSuccess?.(`Worktree for '${pr.headRef}' deleted successfully`)
-    } catch (error) {
-      console.error('Failed to delete worktree:', error)
-      onError?.(`Failed to delete worktree: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    }
-  }, [worktrees, mutateWorktrees, onSuccess, onError])
+        mutateWorktrees();
+        onSuccess?.(`Worktree for '${pr.headRef}' deleted successfully`);
+      } catch (error) {
+        console.error("Failed to delete worktree:", error);
+        onError?.(
+          `Failed to delete worktree: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      }
+    },
+    [worktrees, mutateWorktrees, onSuccess, onError],
+  );
 
   const handleConfirmDelete = useCallback(async () => {
-    if (!pendingDeletePR) return
+    if (!pendingDeletePR) return;
 
-    const worktree = worktrees.find(w => w.branch === pendingDeletePR.headRef)
-    if (!worktree) return
+    const worktree = worktrees.find(
+      (w) => w.branch === pendingDeletePR.headRef,
+    );
+    if (!worktree) return;
 
-    setIsDeleting(true)
+    setIsDeleting(true);
     try {
-      const response = await fetch('/api/worktrees/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/worktrees/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           repo: worktree.repoFullName || worktree.repoName,
           worktreePath: worktree.path,
           force: true,
-          expectedStatus: worktree.status
-        })
-      })
+          expectedStatus: worktree.status,
+        }),
+      });
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to delete worktree')
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete worktree");
       }
 
-      setDeleteModalOpen(false)
-      setPendingDeletePR(null)
-      setPendingDeleteStatus(null)
-      mutateWorktrees()
-      onSuccess?.(`Worktree for '${pendingDeletePR.headRef}' deleted successfully`)
+      setDeleteModalOpen(false);
+      setPendingDeletePR(null);
+      setPendingDeleteStatus(null);
+      mutateWorktrees();
+      onSuccess?.(
+        `Worktree for '${pendingDeletePR.headRef}' deleted successfully`,
+      );
     } catch (error) {
-      console.error('Failed to delete worktree:', error)
-      onError?.(`Failed to delete worktree: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error("Failed to delete worktree:", error);
+      onError?.(
+        `Failed to delete worktree: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     } finally {
-      setIsDeleting(false)
+      setIsDeleting(false);
     }
-  }, [pendingDeletePR, worktrees, mutateWorktrees, onSuccess, onError])
+  }, [pendingDeletePR, worktrees, mutateWorktrees, onSuccess, onError]);
 
   const getStats = useMemo(() => {
     const stats = {
       total: pullRequests.length,
-      open: pullRequests.filter(pr => pr.state === 'open' && !pr.draft).length,
-      draft: pullRequests.filter(pr => pr.draft).length,
-      reviewRequested: pullRequests.filter(pr => pr.reviewDecision === 'REVIEW_REQUIRED').length,
-      changesRequested: pullRequests.filter(pr => pr.reviewDecision === 'CHANGES_REQUESTED').length,
-      approved: pullRequests.filter(pr => pr.reviewDecision === 'APPROVED').length
-    }
-    return stats
-  }, [pullRequests])
+      open: pullRequests.filter((pr) => pr.state === "open" && !pr.draft)
+        .length,
+      draft: pullRequests.filter((pr) => pr.draft).length,
+      reviewRequested: pullRequests.filter(
+        (pr) => pr.reviewDecision === "REVIEW_REQUIRED",
+      ).length,
+      changesRequested: pullRequests.filter(
+        (pr) => pr.reviewDecision === "CHANGES_REQUESTED",
+      ).length,
+      approved: pullRequests.filter((pr) => pr.reviewDecision === "APPROVED")
+        .length,
+    };
+    return stats;
+  }, [pullRequests]);
 
   if (error) {
     return (
       <div className="p-6 text-center">
         <p className="text-destructive">Failed to load pull requests</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -265,7 +326,9 @@ export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSucce
               <p className="text-sm text-red-800 dark:text-red-200">
                 Error fetching. Retrying...
               </p>
-              <p className="text-xs text-red-600 dark:text-red-400 mt-1">{errorMessage}</p>
+              <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                {errorMessage}
+              </p>
             </div>
           </div>
         </div>
@@ -284,36 +347,36 @@ export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSucce
           <h2 className="text-lg font-semibold">Pull Requests</h2>
           <div className="flex items-center space-x-2 text-sm">
             <button
-              onClick={() => setStatusFilter('all')}
+              onClick={() => setStatusFilter("all")}
               className={clsx(
-                'flex items-center space-x-2 px-3 py-1 rounded-md transition-colors',
-                statusFilter === 'all'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted'
+                "flex items-center space-x-2 px-3 py-1 rounded-md transition-colors",
+                statusFilter === "all"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted",
               )}
             >
               <GitPullRequest className="w-4 h-4" />
               <span>{getStats.total} all</span>
             </button>
             <button
-              onClick={() => setStatusFilter('ready')}
+              onClick={() => setStatusFilter("ready")}
               className={clsx(
-                'flex items-center space-x-2 px-3 py-1 rounded-md transition-colors',
-                statusFilter === 'ready'
-                  ? 'bg-green-500 text-white'
-                  : 'text-muted-foreground hover:bg-muted'
+                "flex items-center space-x-2 px-3 py-1 rounded-md transition-colors",
+                statusFilter === "ready"
+                  ? "bg-green-500 text-white"
+                  : "text-muted-foreground hover:bg-muted",
               )}
             >
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               <span>{getStats.open} ready</span>
             </button>
             <button
-              onClick={() => setStatusFilter('draft')}
+              onClick={() => setStatusFilter("draft")}
               className={clsx(
-                'flex items-center space-x-2 px-3 py-1 rounded-md transition-colors',
-                statusFilter === 'draft'
-                  ? 'bg-gray-500 text-white'
-                  : 'text-muted-foreground hover:bg-muted'
+                "flex items-center space-x-2 px-3 py-1 rounded-md transition-colors",
+                statusFilter === "draft"
+                  ? "bg-gray-500 text-white"
+                  : "text-muted-foreground hover:bg-muted",
               )}
             >
               <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
@@ -360,41 +423,43 @@ export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSucce
         ) : Object.keys(filteredAndGroupedPRs).length === 0 ? (
           <div className="p-6 text-center">
             <p className="text-muted-foreground">
-              {searchQuery 
-                ? 'No pull requests match your search' 
-                : 'No pull requests found'}
+              {searchQuery
+                ? "No pull requests match your search"
+                : "No pull requests found"}
             </p>
           </div>
         ) : (
           <div>
             {Object.entries(filteredAndGroupedPRs).map(([groupName, prs]) => (
               <div key={groupName}>
-                {groupBy !== 'none' && (
+                {groupBy !== "none" && (
                   <RepositoryHeader
                     repositoryName={groupName}
                     itemCount={prs.length}
-                    showFilterButton={groupBy === 'repository' && !!onFilterByRepository}
+                    showFilterButton={
+                      groupBy === "repository" && !!onFilterByRepository
+                    }
                     isFilterActive={filterRepo === groupName}
                     onToggleFilter={onFilterByRepository}
                     onClearFilter={onClearFilter}
                   />
                 )}
                 {prs.map((pr) => {
-                  const prKey = `${pr.repository}-${pr.number}`
-                  const isAnimating = animatingPRKey === prKey
+                  const prKey = `${pr.repository}-${pr.number}`;
+                  const isAnimating = animatingPRKey === prKey;
                   return (
                     <div
                       key={prKey}
                       ref={(el) => {
                         if (el) {
-                          prRowRefs.current.set(prKey, el)
+                          prRowRefs.current.set(prKey, el);
                         } else {
-                          prRowRefs.current.delete(prKey)
+                          prRowRefs.current.delete(prKey);
                         }
                       }}
                       className={clsx(
-                        'transition-all duration-300',
-                        isAnimating && 'animate-pr-glow'
+                        "transition-all duration-300",
+                        isAnimating && "animate-pr-glow",
                       )}
                     >
                       <PRRow
@@ -406,7 +471,7 @@ export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSucce
                         editorConfig={config?.editor}
                       />
                     </div>
-                  )
+                  );
                 })}
               </div>
             ))}
@@ -436,15 +501,20 @@ export function PullRequestsView({ onCreateWorktree, onCreateFromBranch, onSucce
       <DeleteWorktreeModal
         isOpen={deleteModalOpen}
         onClose={() => {
-          setDeleteModalOpen(false)
-          setPendingDeletePR(null)
-          setPendingDeleteStatus(null)
+          setDeleteModalOpen(false);
+          setPendingDeletePR(null);
+          setPendingDeleteStatus(null);
         }}
-        worktree={pendingDeletePR ? worktrees.find(w => w.branch === pendingDeletePR.headRef) || null : null}
+        worktree={
+          pendingDeletePR
+            ? worktrees.find((w) => w.branch === pendingDeletePR.headRef) ||
+              null
+            : null
+        }
         status={pendingDeleteStatus}
         onConfirm={handleConfirmDelete}
         isLoading={isDeleting}
       />
     </div>
-  )
+  );
 }

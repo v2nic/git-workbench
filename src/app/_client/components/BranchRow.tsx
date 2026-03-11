@@ -1,15 +1,23 @@
-import React, { memo, useCallback, useState, useEffect, useRef } from 'react'
-import { Branch } from '@/types/branches'
-import { Button } from './ui/Button'
-import { GitBranch, GitBranchPlus, FolderOpen, MoreVertical, Trash2, Globe, Monitor } from 'lucide-react'
-import clsx from 'clsx'
+import React, { memo, useCallback, useState, useEffect, useRef } from "react";
+import { Branch } from "@/types/branches";
+import { Button } from "./ui/Button";
+import {
+  GitBranch,
+  GitBranchPlus,
+  FolderOpen,
+  MoreVertical,
+  Trash2,
+  Globe,
+  Monitor,
+} from "lucide-react";
+import clsx from "clsx";
 
 interface BranchRowProps {
-  branch: Branch
-  onJumpToWorktree: (repoName: string, branchName: string) => void
-  onCreateWorktree: (repoName: string, branchName: string) => void
-  onDeleteBranch: (branch: Branch) => void
-  isHighlighted?: boolean
+  branch: Branch;
+  onJumpToWorktree: (repoName: string, branchName: string) => void;
+  onCreateWorktree: (repoName: string, branchName: string) => void;
+  onDeleteBranch: (branch: Branch) => void;
+  isHighlighted?: boolean;
 }
 
 export const BranchRow = memo(function BranchRow({
@@ -19,72 +27,74 @@ export const BranchRow = memo(function BranchRow({
   onDeleteBranch,
   isHighlighted,
 }: BranchRowProps) {
-  const [showMenu, setShowMenu] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowMenu(false)
+        setShowMenu(false);
       }
-    }
+    };
 
     if (showMenu) {
-      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [showMenu])
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showMenu]);
 
   const handleJumpToWorktree = useCallback(() => {
-    onJumpToWorktree(branch.repoName, branch.name)
-  }, [branch.repoName, branch.name, onJumpToWorktree])
+    onJumpToWorktree(branch.repoName, branch.name);
+  }, [branch.repoName, branch.name, onJumpToWorktree]);
 
   const handleCreateWorktree = useCallback(() => {
-    const ref = branch.isRemote && !branch.isLocal && branch.remoteName
-      ? `${branch.remoteName}/${branch.name}`
-      : branch.name
-    onCreateWorktree(branch.repoName, ref)
-  }, [branch, onCreateWorktree])
+    const ref =
+      branch.isRemote && !branch.isLocal && branch.remoteName
+        ? `${branch.remoteName}/${branch.name}`
+        : branch.name;
+    onCreateWorktree(branch.repoName, ref);
+  }, [branch, onCreateWorktree]);
 
   const handleDeleteClick = useCallback(() => {
-    setShowMenu(false)
-    onDeleteBranch(branch)
-  }, [branch, onDeleteBranch])
+    setShowMenu(false);
+    onDeleteBranch(branch);
+  }, [branch, onDeleteBranch]);
 
   const handleMenuToggle = useCallback(() => {
-    setShowMenu(prev => !prev)
-  }, [])
+    setShowMenu((prev) => !prev);
+  }, []);
 
-  const locationLabel = branch.isLocal && branch.isRemote
-    ? 'local + remote'
-    : branch.isLocal
-      ? 'local'
-      : 'remote'
+  const locationLabel =
+    branch.isLocal && branch.isRemote
+      ? "local + remote"
+      : branch.isLocal
+        ? "local"
+        : "remote";
 
   const relativeDate = branch.lastCommitDate
     ? formatRelativeDate(branch.lastCommitDate)
-    : undefined
+    : undefined;
 
   return (
     <div
       className={clsx(
-        'border-b px-4 py-3 hover:bg-muted/50 transition-colors',
-        isHighlighted && 'bg-blue-50 dark:bg-blue-900/20 animate-pulse'
+        "border-b px-4 py-3 hover:bg-muted/50 transition-colors",
+        isHighlighted && "bg-blue-50 dark:bg-blue-900/20 animate-pulse",
       )}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3 min-w-0 flex-1">
           <GitBranch
             className={clsx(
-              'w-4 h-4 flex-shrink-0',
+              "w-4 h-4 flex-shrink-0",
               branch.hasWorktree
-                ? 'text-green-500'
+                ? "text-green-500"
                 : branch.isRemote && !branch.isLocal
-                  ? 'text-blue-400'
-                  : 'text-muted-foreground'
+                  ? "text-blue-400"
+                  : "text-muted-foreground",
             )}
           />
 
@@ -94,15 +104,17 @@ export const BranchRow = memo(function BranchRow({
 
               <span
                 className={clsx(
-                  'px-1.5 py-0.5 text-xs rounded-full flex-shrink-0',
+                  "px-1.5 py-0.5 text-xs rounded-full flex-shrink-0",
                   branch.isLocal && branch.isRemote
-                    ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                    ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
                     : branch.isLocal
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                      : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                      : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
                 )}
               >
-                {branch.isLocal && <Monitor className="w-3 h-3 inline mr-0.5" />}
+                {branch.isLocal && (
+                  <Monitor className="w-3 h-3 inline mr-0.5" />
+                )}
                 {branch.isRemote && <Globe className="w-3 h-3 inline mr-0.5" />}
                 {locationLabel}
               </span>
@@ -123,8 +135,12 @@ export const BranchRow = memo(function BranchRow({
             {(branch.lastCommitMessage || relativeDate) && (
               <p className="text-xs text-muted-foreground mt-0.5 truncate">
                 {relativeDate && <span>{relativeDate}</span>}
-                {relativeDate && branch.lastCommitMessage && <span> &middot; </span>}
-                {branch.lastCommitMessage && <span>{branch.lastCommitMessage}</span>}
+                {relativeDate && branch.lastCommitMessage && (
+                  <span> &middot; </span>
+                )}
+                {branch.lastCommitMessage && (
+                  <span>{branch.lastCommitMessage}</span>
+                )}
               </p>
             )}
           </div>
@@ -132,7 +148,11 @@ export const BranchRow = memo(function BranchRow({
 
         <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
           {branch.hasWorktree ? (
-            <Button variant="secondary" size="sm" onClick={handleJumpToWorktree}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleJumpToWorktree}
+            >
               <FolderOpen className="w-4 h-4 mr-1" />
               Worktree
             </Button>
@@ -167,21 +187,21 @@ export const BranchRow = memo(function BranchRow({
         </div>
       </div>
     </div>
-  )
-})
+  );
+});
 
 function formatRelativeDate(dateStr: string): string {
-  const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMins / 60)
-  const diffDays = Math.floor(diffHours / 24)
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
 
-  if (diffMins < 1) return 'just now'
-  if (diffMins < 60) return `${diffMins}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  if (diffDays < 30) return `${diffDays}d ago`
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`
-  return `${Math.floor(diffDays / 365)}y ago`
+  if (diffMins < 1) return "just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 30) return `${diffDays}d ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
+  return `${Math.floor(diffDays / 365)}y ago`;
 }

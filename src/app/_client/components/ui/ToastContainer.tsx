@@ -1,20 +1,20 @@
-import React from 'react'
-import { Toast, ToastType } from './Toast'
+import React from "react";
+import { Toast, ToastType } from "./Toast";
 
 interface ToastMessage {
-  id: string
-  message: string
-  type: ToastType
+  id: string;
+  message: string;
+  type: ToastType;
 }
 
 interface ToastContainerProps {
-  toasts: ToastMessage[]
-  onRemoveToast: (id: string) => void
+  toasts: ToastMessage[];
+  onRemoveToast: (id: string) => void;
 }
 
 export function ToastContainer({ toasts, onRemoveToast }: ToastContainerProps) {
   if (toasts.length === 0) {
-    return null
+    return null;
   }
 
   return (
@@ -28,5 +28,5 @@ export function ToastContainer({ toasts, onRemoveToast }: ToastContainerProps) {
         />
       ))}
     </div>
-  )
+  );
 }

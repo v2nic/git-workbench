@@ -1,17 +1,17 @@
-import { NextResponse } from 'next/server'
-import { checkGitHubAuth } from '@/lib/github'
+import { NextResponse } from "next/server";
+import { checkGitHubAuth } from "@/lib/github";
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const isAuthenticated = await checkGitHubAuth()
-    return NextResponse.json({ authenticated: isAuthenticated })
+    const isAuthenticated = await checkGitHubAuth();
+    return NextResponse.json({ authenticated: isAuthenticated });
   } catch (error) {
-    console.error('Failed to check GitHub auth status:', error)
+    console.error("Failed to check GitHub auth status:", error);
     return NextResponse.json(
-      { error: 'Failed to check authentication status' },
-      { status: 500 }
-    )
+      { error: "Failed to check authentication status" },
+      { status: 500 },
+    );
   }
 }

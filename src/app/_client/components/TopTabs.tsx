@@ -1,21 +1,21 @@
-import React from 'react'
-import { Tab } from '../state/useAppNavigation'
-import { Button } from './ui/Button'
-import clsx from 'clsx'
+import React from "react";
+import { Tab } from "../state/useAppNavigation";
+import { Button } from "./ui/Button";
+import clsx from "clsx";
 
 interface TopTabsProps {
-  activeTab: Tab
-  onTabChange: (tab: Tab) => void
+  activeTab: Tab;
+  onTabChange: (tab: Tab) => void;
 }
 
 export function TopTabs({ activeTab, onTabChange }: TopTabsProps) {
   const tabs: Array<{ id: Tab; label: string }> = [
-    { id: 'favorites', label: 'Favorites' },
-    { id: 'repositories', label: 'Repositories' },
-    { id: 'worktrees', label: 'Worktrees' },
-    { id: 'branches', label: 'Branches' },
-    { id: 'pull-requests', label: 'Pull Requests' }
-  ]
+    { id: "favorites", label: "Favorites" },
+    { id: "repositories", label: "Repositories" },
+    { id: "worktrees", label: "Worktrees" },
+    { id: "branches", label: "Branches" },
+    { id: "pull-requests", label: "Pull Requests" },
+  ];
 
   return (
     <div className="border-b">
@@ -25,10 +25,10 @@ export function TopTabs({ activeTab, onTabChange }: TopTabsProps) {
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
             className={clsx(
-              'py-4 px-1 border-b-2 font-medium text-sm transition-colors',
+              "py-4 px-1 border-b-2 font-medium text-sm transition-colors",
               activeTab === tab.id
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50'
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/50",
             )}
           >
             {tab.label}
@@ -36,5 +36,5 @@ export function TopTabs({ activeTab, onTabChange }: TopTabsProps) {
         ))}
       </nav>
     </div>
-  )
+  );
 }

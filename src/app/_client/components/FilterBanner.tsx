@@ -1,27 +1,30 @@
-import React from 'react'
-import { Button } from './ui/Button'
-import { X } from 'lucide-react'
+import React from "react";
+import { Button } from "./ui/Button";
+import { X } from "lucide-react";
 
 interface FilterBannerProps {
-  filterValue?: string
-  filterType: 'pull requests' | 'worktrees' | 'branches'
-  onClearFilter?: () => void
-  className?: string
+  filterValue?: string;
+  filterType: "pull requests" | "worktrees" | "branches";
+  onClearFilter?: () => void;
+  className?: string;
 }
 
 export function FilterBanner({
   filterValue,
   filterType,
   onClearFilter,
-  className = ''
+  className = "",
 }: FilterBannerProps) {
-  if (!filterValue) return null
+  if (!filterValue) return null;
 
   return (
-    <div className={`bg-blue-50 border-b border-blue-200 px-4 py-3 ${className}`}>
+    <div
+      className={`bg-blue-50 border-b border-blue-200 px-4 py-3 ${className}`}
+    >
       <div className="flex items-center justify-between">
         <span className="text-sm text-blue-800">
-          Showing {filterType} for: <strong className="text-blue-900">{filterValue}</strong>
+          Showing {filterType} for:{" "}
+          <strong className="text-blue-900">{filterValue}</strong>
         </span>
         {onClearFilter && (
           <Button
@@ -36,5 +39,5 @@ export function FilterBanner({
         )}
       </div>
     </div>
-  )
+  );
 }

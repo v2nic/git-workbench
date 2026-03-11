@@ -1,21 +1,21 @@
-import React from 'react'
-import { RepositoryFilterButton } from './RepositoryFilterButton'
-import { Button } from './ui/Button'
-import clsx from 'clsx'
+import React from "react";
+import { RepositoryFilterButton } from "./RepositoryFilterButton";
+import { Button } from "./ui/Button";
+import clsx from "clsx";
 
 interface RepositoryHeaderProps {
-  repositoryName: string
-  itemCount?: number
-  showFilterButton?: boolean
-  isFilterActive?: boolean
-  onToggleFilter?: (repoName: string) => void
-  onClearFilter?: () => void
+  repositoryName: string;
+  itemCount?: number;
+  showFilterButton?: boolean;
+  isFilterActive?: boolean;
+  onToggleFilter?: (repoName: string) => void;
+  onClearFilter?: () => void;
   actionButton?: {
-    label: string
-    onClick: () => void
-    icon?: React.ReactNode
-    variant?: 'primary' | 'secondary' | 'ghost'
-  }
+    label: string;
+    onClick: () => void;
+    icon?: React.ReactNode;
+    variant?: "primary" | "secondary" | "ghost";
+  };
 }
 
 export function RepositoryHeader({
@@ -25,7 +25,7 @@ export function RepositoryHeader({
   isFilterActive = false,
   onToggleFilter,
   onClearFilter,
-  actionButton
+  actionButton,
 }: RepositoryHeaderProps) {
   return (
     <div className="px-4 py-2 bg-muted/50 border-b flex items-center justify-between">
@@ -36,9 +36,9 @@ export function RepositoryHeader({
             isActive={isFilterActive}
             onToggleFilter={(repoName) => {
               if (isFilterActive) {
-                onClearFilter?.()
+                onClearFilter?.();
               } else {
-                onToggleFilter(repoName)
+                onToggleFilter(repoName);
               }
             }}
           />
@@ -46,16 +46,14 @@ export function RepositoryHeader({
         <h3 className="font-medium text-sm text-muted-foreground">
           {repositoryName}
           {itemCount !== undefined && (
-            <span className="ml-1">
-              ({itemCount})
-            </span>
+            <span className="ml-1">({itemCount})</span>
           )}
         </h3>
       </div>
-      
+
       {actionButton && (
         <Button
-          variant={actionButton.variant || 'primary'}
+          variant={actionButton.variant || "primary"}
           size="sm"
           onClick={actionButton.onClick}
         >
@@ -64,5 +62,5 @@ export function RepositoryHeader({
         </Button>
       )}
     </div>
-  )
+  );
 }

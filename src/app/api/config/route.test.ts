@@ -1,98 +1,98 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { GET, PATCH } from './route'
-import { getConfig, updateConfig } from '@/lib/config'
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { GET, PATCH } from "./route";
+import { getConfig, updateConfig } from "@/lib/config";
 
 // Mock the config module
-vi.mock('@/lib/config', () => ({
+vi.mock("@/lib/config", () => ({
   getConfig: vi.fn(),
-  updateConfig: vi.fn()
-}))
+  updateConfig: vi.fn(),
+}));
 
-const mockGetConfig = vi.mocked(getConfig)
-const mockUpdateConfig = vi.mocked(updateConfig)
+const mockGetConfig = vi.mocked(getConfig);
+const mockUpdateConfig = vi.mocked(updateConfig);
 
-describe('/api/config', () => {
+describe("/api/config", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
-  describe('GET', () => {
-    it('should return config successfully', async () => {
+  describe("GET", () => {
+    it("should return config successfully", async () => {
       const mockConfig = {
         version: 1,
         paths: {
-          bareRoot: '~/Source/git-root',
-          worktreeRoot: '~/Source'
+          bareRoot: "~/Source/git-root",
+          worktreeRoot: "~/Source",
         },
-        repos: []
-      }
-      
-      mockGetConfig.mockResolvedValue(mockConfig)
+        repos: [],
+      };
 
-      const response = await GET()
-      const data = await response.json()
+      mockGetConfig.mockResolvedValue(mockConfig);
 
-      expect(response.status).toBe(200)
-      expect(data).toEqual(mockConfig)
-      expect(mockGetConfig).toHaveBeenCalledTimes(1)
-    })
+      const response = await GET();
+      const data = await response.json();
 
-    it('should handle errors', async () => {
-      mockGetConfig.mockRejectedValue(new Error('Config not found'))
+      expect(response.status).toBe(200);
+      expect(data).toEqual(mockConfig);
+      expect(mockGetConfig).toHaveBeenCalledTimes(1);
+    });
 
-      const response = await GET()
-      const data = await response.json()
+    it("should handle errors", async () => {
+      mockGetConfig.mockRejectedValue(new Error("Config not found"));
 
-      expect(response.status).toBe(500)
-      expect(data).toEqual({ error: 'Failed to get configuration' })
-    })
-  })
+      const response = await GET();
+      const data = await response.json();
 
-  describe('PATCH', () => {
-    it('should update config successfully', async () => {
+      expect(response.status).toBe(500);
+      expect(data).toEqual({ error: "Failed to get configuration" });
+    });
+  });
+
+  describe("PATCH", () => {
+    it("should update config successfully", async () => {
       const mockConfig = {
         version: 1,
         paths: {
-          bareRoot: '~/Source/git-root',
-          worktreeRoot: '~/Source'
+          bareRoot: "~/Source/git-root",
+          worktreeRoot: "~/Source",
         },
-        repos: []
-      }
+        repos: [],
+      };
 
       const updates = {
         paths: {
-          bareRoot: '~/New/git-root'
-        }
-      }
+          bareRoot: "~/New/git-root",
+        },
+      };
 
-      const updatedConfig = { ...mockConfig, ...updates }
-      
-      mockUpdateConfig.mockResolvedValue(updatedConfig)
+      const updatedConfig = { ...mockConfig, ...updates };
 
-      const mockRequest = {
-        json: vi.fn().mockResolvedValue(updates)
-      } as any
-
-      const response = await PATCH(mockRequest)
-      const data = await response.json()
-
-      expect(response.status).toBe(200)
-      expect(data).toEqual(updatedConfig)
-      expect(mockUpdateConfig).toHaveBeenCalledWith(updates)
-    })
-
-    it('should handle errors', async () => {
-      mockUpdateConfig.mockRejectedValue(new Error('Update failed'))
+      mockUpdateConfig.mockResolvedValue(updatedConfig);
 
       const mockRequest = {
-        json: vi.fn().mockResolvedValue({})
-      } as any
+        json: vi.fn().mockResolvedValue(updates),
+      } as any;
 
-      const response = await PATCH(mockRequest)
-      const data = await response.json()
+      const response = await PATCH(mockRequest);
+      const data = await response.json();
 
-      expect(response.status).toBe(500)
-      expect(data).toEqual({ error: 'Failed to update configuration' })
-    })
-  })
-})
+      expect(response.status).toBe(200);
+      expect(data).toEqual(updatedConfig);
+      expect(mockUpdateConfig).toHaveBeenCalledWith(updates);
+    });
+
+    it("should handle errors", async () => {
+      mockUpdateConfig.mockRejectedValue(new Error("Update failed"));
+
+      const mockRequest = {
+        json: vi.fn().mockResolvedValue({}),
+      } as any;
+
+      const response = await PATCH(mockRequest);
+      const data = await response.json();
+
+      expect(response.status).toBe(500);
+      expect(data).toEqual({ error: "Failed to update configuration" });
+    });
+  });
+});

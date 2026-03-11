@@ -1,36 +1,36 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { searchGitHubRepos, checkGitHubAuth } from '@/lib/github'
+import { NextRequest, NextResponse } from "next/server";
+import { searchGitHubRepos, checkGitHubAuth } from "@/lib/github";
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const query = searchParams.get('q')
+    const { searchParams } = new URL(request.url);
+    const query = searchParams.get("q");
 
     if (!query) {
       return NextResponse.json(
         { error: 'Query parameter "q" is required' },
-        { status: 400 }
-      )
+        { status: 400 },
+      );
     }
 
     // Check if authenticated
-    const isAuthenticated = await checkGitHubAuth()
+    const isAuthenticated = await checkGitHubAuth();
     if (!isAuthenticated) {
       return NextResponse.json(
-        { error: 'GitHub authentication required' },
-        { status: 401 }
-      )
+        { error: "GitHub authentication required" },
+        { status: 401 },
+      );
     }
 
-    const repos = await searchGitHubRepos(query)
-    return NextResponse.json(repos)
+    const repos = await searchGitHubRepos(query);
+    return NextResponse.json(repos);
   } catch (error) {
-    console.error('Failed to search GitHub repos:', error)
+    console.error("Failed to search GitHub repos:", error);
     return NextResponse.json(
-      { error: 'Failed to search repositories' },
-      { status: 500 }
-    )
+      { error: "Failed to search repositories" },
+      { status: 500 },
+    );
   }
 }

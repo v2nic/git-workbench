@@ -1,18 +1,18 @@
-import React from 'react'
-import { Worktree } from '@/types/worktrees'
-import { PRNotification } from '@/types/github'
-import { CopyLabel } from './CopyLabel'
-import { GitPullRequest } from 'lucide-react'
-import { usePullRequest } from '../data/usePullRequest'
-import clsx from 'clsx'
+import React from "react";
+import { Worktree } from "@/types/worktrees";
+import { PRNotification } from "@/types/github";
+import { CopyLabel } from "./CopyLabel";
+import { GitPullRequest } from "lucide-react";
+import { usePullRequest } from "../data/usePullRequest";
+import clsx from "clsx";
 
 interface WorktreeBranchInfoProps {
-  worktree: Worktree
-  worktreeName: string
-  isDirty: boolean
-  pullRequests: PRNotification[]
-  matchingPR?: PRNotification
-  onNavigateToPR?: () => void
+  worktree: Worktree;
+  worktreeName: string;
+  isDirty: boolean;
+  pullRequests: PRNotification[];
+  matchingPR?: PRNotification;
+  onNavigateToPR?: () => void;
 }
 
 export const WorktreeBranchInfo: React.FC<WorktreeBranchInfoProps> = ({
@@ -21,9 +21,12 @@ export const WorktreeBranchInfo: React.FC<WorktreeBranchInfoProps> = ({
   isDirty,
   pullRequests,
   matchingPR,
-  onNavigateToPR
+  onNavigateToPR,
 }) => {
-  const { pullRequests: branchPullRequests } = usePullRequest(worktree.repoFullName || '', worktree.branch)
+  const { pullRequests: branchPullRequests } = usePullRequest(
+    worktree.repoFullName || "",
+    worktree.branch,
+  );
 
   return (
     <>
@@ -56,9 +59,7 @@ export const WorktreeBranchInfo: React.FC<WorktreeBranchInfoProps> = ({
             </span>
           )}
           {!isDirty && (
-            <span className="text-green-600 dark:text-green-400">
-              clean
-            </span>
+            <span className="text-green-600 dark:text-green-400">clean</span>
           )}
           {matchingPR && (
             <button
@@ -71,18 +72,18 @@ export const WorktreeBranchInfo: React.FC<WorktreeBranchInfoProps> = ({
           )}
         </div>
       )}
-      
+
       {/* Branch name - only show if different from worktree name */}
       {worktree.branch !== worktreeName && (
         <div className="flex items-center space-x-1 mt-1">
-          <CopyLabel 
-            text={worktree.branch} 
+          <CopyLabel
+            text={worktree.branch}
             className="text-sm text-muted-foreground"
             title="Copy branch name"
           />
         </div>
       )}
-      
+
       {/* PR badges from usePullRequest hook */}
       <div className="flex-1">
         {branchPullRequests.length > 0 && (
@@ -94,12 +95,12 @@ export const WorktreeBranchInfo: React.FC<WorktreeBranchInfoProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 className={clsx(
-                  'text-xs px-2 py-1 rounded',
-                  pr.state === 'OPEN' 
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                    : pr.state === 'MERGED'
-                    ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-                    : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                  "text-xs px-2 py-1 rounded",
+                  pr.state === "OPEN"
+                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                    : pr.state === "MERGED"
+                      ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+                      : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
                 )}
               >
                 #{pr.number}
@@ -109,5 +110,5 @@ export const WorktreeBranchInfo: React.FC<WorktreeBranchInfoProps> = ({
         )}
       </div>
     </>
-  )
-}
+  );
+};

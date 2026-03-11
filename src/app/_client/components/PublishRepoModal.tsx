@@ -1,121 +1,147 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react'
-import { Button } from './ui/Button'
-import { Input } from './ui/Input'
-import { X, Github, Globe, Lock, AlertTriangle } from 'lucide-react'
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import { Button } from "./ui/Button";
+import { Input } from "./ui/Input";
+import { X, Github, Globe, Lock, AlertTriangle } from "lucide-react";
 
 interface PublishRepoModalProps {
   repo: {
-    repoName: string
-    fullName?: string
-    barePath?: string
-  }
-  onClose: () => void
-  onSuccess: (sshUrl: string) => void
+    repoName: string;
+    fullName?: string;
+    barePath?: string;
+  };
+  onClose: () => void;
+  onSuccess: (sshUrl: string) => void;
 }
 
 interface PublishState {
-  organization: string
-  visibility: 'public' | 'private'
-  isSubmitting: boolean
-  error: string
+  organization: string;
+  visibility: "public" | "private";
+  isSubmitting: boolean;
+  error: string;
 }
 
-export function PublishRepoModal({ repo, onClose, onSuccess }: PublishRepoModalProps) {
+export function PublishRepoModal({
+  repo,
+  onClose,
+  onSuccess,
+}: PublishRepoModalProps) {
   const [state, setState] = useState<PublishState>({
-    organization: repo.fullName ? repo.fullName.split('/')[0] : '',
-    visibility: 'private',
+    organization: repo.fullName ? repo.fullName.split("/")[0] : "",
+    visibility: "private",
     isSubmitting: false,
-    error: ''
-  })
+    error: "",
+  });
 
-  const modalRef = useRef<HTMLDivElement>(null)
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // Focus organization input when modal opens
   useEffect(() => {
     // Auto-focus removed since Input component doesn't support ref forwarding
-  }, [])
+  }, []);
 
   // Close on escape key
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose()
+      if (event.key === "Escape") {
+        onClose();
       }
-    }
+    };
 
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   // Close when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        onClose()
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
+        onClose();
       }
-    }
+    };
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [onClose])
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [onClose]);
 
   const updateOrganization = useCallback((organization: string) => {
-    setState(prev => ({ ...prev, organization, error: '' }))
-  }, [])
+    setState((prev) => ({ ...prev, organization, error: "" }));
+  }, []);
 
-  const updateVisibility = useCallback((visibility: 'public' | 'private') => {
-    setState(prev => ({ ...prev, visibility, error: '' }))
-  }, [])
+  const updateVisibility = useCallback((visibility: "public" | "private") => {
+    setState((prev) => ({ ...prev, visibility, error: "" }));
+  }, []);
 
   const clearError = useCallback(() => {
-    setState(prev => ({ ...prev, error: '' }))
-  }, [])
+    setState((prev) => ({ ...prev, error: "" }));
+  }, []);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!state.organization.trim()) {
-      setState(prev => ({ ...prev, error: 'Organization or username is required' }))
-      return
-    }
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
 
-    setState(prev => ({ ...prev, isSubmitting: true, error: '' }))
-
-    try {
-      const response = await fetch('/api/repos/publish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          repoName: repo.repoName,
-          organization: state.organization.trim(),
-          visibility: state.visibility,
-          barePath: repo.barePath
-        })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to publish repository')
+      if (!state.organization.trim()) {
+        setState((prev) => ({
+          ...prev,
+          error: "Organization or username is required",
+        }));
+        return;
       }
 
-      // Success! Call onSuccess with the SSH URL
-      onSuccess(data.sshUrl)
-      onClose()
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        isSubmitting: false,
-        error: error instanceof Error ? error.message : 'An unknown error occurred'
-      }))
-    }
-  }, [state.organization, state.visibility, repo.repoName, repo.barePath, onSuccess, onClose])
+      setState((prev) => ({ ...prev, isSubmitting: true, error: "" }));
 
-  const fullRepoName = `${state.organization}/${repo.repoName}`
+      try {
+        const response = await fetch("/api/repos/publish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            repoName: repo.repoName,
+            organization: state.organization.trim(),
+            visibility: state.visibility,
+            barePath: repo.barePath,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to publish repository");
+        }
+
+        // Success! Call onSuccess with the SSH URL
+        onSuccess(data.sshUrl);
+        onClose();
+      } catch (error) {
+        setState((prev) => ({
+          ...prev,
+          isSubmitting: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "An unknown error occurred",
+        }));
+      }
+    },
+    [
+      state.organization,
+      state.visibility,
+      repo.repoName,
+      repo.barePath,
+      onSuccess,
+      onClose,
+    ],
+  );
+
+  const fullRepoName = `${state.organization}/${repo.repoName}`;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div 
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
         ref={modalRef}
         className="bg-background border rounded-lg shadow-lg max-w-md w-full"
         onClick={(e) => e.stopPropagation()}
@@ -141,13 +167,18 @@ export function PublishRepoModal({ repo, onClose, onSuccess }: PublishRepoModalP
           <div className="p-3 bg-muted/50 rounded-md">
             <p className="text-sm font-medium">{repo.repoName}</p>
             {repo.fullName && (
-              <p className="text-xs text-muted-foreground">Current: {repo.fullName}</p>
+              <p className="text-xs text-muted-foreground">
+                Current: {repo.fullName}
+              </p>
             )}
           </div>
 
           {/* Organization/Username */}
           <div>
-            <label htmlFor="organization" className="block text-sm font-medium mb-2">
+            <label
+              htmlFor="organization"
+              className="block text-sm font-medium mb-2"
+            >
               Organization or Username
             </label>
             <Input
@@ -172,15 +203,19 @@ export function PublishRepoModal({ repo, onClose, onSuccess }: PublishRepoModalP
                   type="radio"
                   name="visibility"
                   value="private"
-                  checked={state.visibility === 'private'}
-                  onChange={(e) => updateVisibility(e.target.value as 'private')}
+                  checked={state.visibility === "private"}
+                  onChange={(e) =>
+                    updateVisibility(e.target.value as "private")
+                  }
                   disabled={state.isSubmitting}
                   className="text-primary"
                 />
                 <Lock className="w-4 h-4 text-muted-foreground" />
                 <div>
                   <span className="text-sm font-medium">Private</span>
-                  <p className="text-xs text-muted-foreground">Only you can see this repository</p>
+                  <p className="text-xs text-muted-foreground">
+                    Only you can see this repository
+                  </p>
                 </div>
               </label>
               <label className="flex items-center space-x-3 cursor-pointer">
@@ -188,15 +223,17 @@ export function PublishRepoModal({ repo, onClose, onSuccess }: PublishRepoModalP
                   type="radio"
                   name="visibility"
                   value="public"
-                  checked={state.visibility === 'public'}
-                  onChange={(e) => updateVisibility(e.target.value as 'public')}
+                  checked={state.visibility === "public"}
+                  onChange={(e) => updateVisibility(e.target.value as "public")}
                   disabled={state.isSubmitting}
                   className="text-primary"
                 />
                 <Globe className="w-4 h-4 text-muted-foreground" />
                 <div>
                   <span className="text-sm font-medium">Public</span>
-                  <p className="text-xs text-muted-foreground">Anyone can see this repository</p>
+                  <p className="text-xs text-muted-foreground">
+                    Anyone can see this repository
+                  </p>
                 </div>
               </label>
             </div>
@@ -241,12 +278,12 @@ export function PublishRepoModal({ repo, onClose, onSuccess }: PublishRepoModalP
                   <span>Publishing...</span>
                 </div>
               ) : (
-                'Publish'
+                "Publish"
               )}
             </Button>
           </div>
         </form>
       </div>
     </div>
-  )
+  );
 }

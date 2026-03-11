@@ -1,12 +1,12 @@
-import { Metadata } from 'next'
-import AppShell from '../_client/AppShell'
+import { Metadata } from "next";
+import AppShell from "../_client/AppShell";
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: 'Branches'
-}
+  title: "Branches",
+};
 
 export default function BranchesPage() {
-  return <AppShell />
+  return <AppShell />;
 }

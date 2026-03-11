@@ -1,24 +1,24 @@
-import React, { useMemo, useState, useCallback } from 'react'
-import { useBranches } from '../data/useBranches'
-import { useRepos } from '../data/useRepos'
-import { BranchRow } from './BranchRow'
-import { FilterBanner } from './FilterBanner'
-import { RepositoryHeader } from './RepositoryHeader'
-import { DeleteBranchModal } from './DeleteBranchModal'
-import { Input } from './ui/Input'
-import { Button } from './ui/Button'
-import { Search, X, Globe, Monitor, GitBranchPlus } from 'lucide-react'
-import { Branch } from '@/types/branches'
-import clsx from 'clsx'
+import React, { useMemo, useState, useCallback } from "react";
+import { useBranches } from "../data/useBranches";
+import { useRepos } from "../data/useRepos";
+import { BranchRow } from "./BranchRow";
+import { FilterBanner } from "./FilterBanner";
+import { RepositoryHeader } from "./RepositoryHeader";
+import { DeleteBranchModal } from "./DeleteBranchModal";
+import { Input } from "./ui/Input";
+import { Button } from "./ui/Button";
+import { Search, X, Globe, Monitor, GitBranchPlus } from "lucide-react";
+import { Branch } from "@/types/branches";
+import clsx from "clsx";
 
 interface BranchesViewProps {
-  filterRepo?: string
-  onClearFilter?: () => void
-  onFilterByRepository?: (repoName: string) => void
-  onCreateWorktree: (repoName: string, branchName: string) => void
-  onJumpToWorktree: (repoName: string, branchName: string) => void
-  onSuccess?: (message: string) => void
-  onError?: (message: string) => void
+  filterRepo?: string;
+  onClearFilter?: () => void;
+  onFilterByRepository?: (repoName: string) => void;
+  onCreateWorktree: (repoName: string, branchName: string) => void;
+  onJumpToWorktree: (repoName: string, branchName: string) => void;
+  onSuccess?: (message: string) => void;
+  onError?: (message: string) => void;
 }
 
 export function BranchesView({
@@ -30,72 +30,80 @@ export function BranchesView({
   onSuccess,
   onError,
 }: BranchesViewProps) {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [includeRemote, setIncludeRemote] = useState(false)
-  const [favoritesOnly, setFavoritesOnly] = useState(true)
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-  const [pendingDeleteBranch, setPendingDeleteBranch] = useState<Branch | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [includeRemote, setIncludeRemote] = useState(false);
+  const [favoritesOnly, setFavoritesOnly] = useState(true);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [pendingDeleteBranch, setPendingDeleteBranch] = useState<Branch | null>(
+    null,
+  );
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { branches, isLoading, error, mutate } = useBranches({
     repo: filterRepo,
     includeRemote,
     favoritesOnly: !filterRepo && favoritesOnly,
-  })
+  });
 
-  const { repos } = useRepos()
+  const { repos } = useRepos();
 
   const filteredBranches = useMemo(() => {
-    if (!searchQuery.trim()) return branches
+    if (!searchQuery.trim()) return branches;
 
-    const query = searchQuery.toLowerCase()
+    const query = searchQuery.toLowerCase();
     return branches.filter(
       (b) =>
         b.name.toLowerCase().includes(query) ||
         b.repoName.toLowerCase().includes(query) ||
-        (b.lastCommitMessage && b.lastCommitMessage.toLowerCase().includes(query))
-    )
-  }, [branches, searchQuery])
+        (b.lastCommitMessage &&
+          b.lastCommitMessage.toLowerCase().includes(query)),
+    );
+  }, [branches, searchQuery]);
 
   const branchesByRepo = useMemo(() => {
-    const grouped = new Map<string, Branch[]>()
+    const grouped = new Map<string, Branch[]>();
 
     filteredBranches.forEach((branch) => {
-      const key = branch.repoName
+      const key = branch.repoName;
       if (!grouped.has(key)) {
-        grouped.set(key, [])
+        grouped.set(key, []);
       }
-      grouped.get(key)!.push(branch)
-    })
+      grouped.get(key)!.push(branch);
+    });
 
     return Array.from(grouped.entries()).sort(([a], [b]) => {
-      const repoA = repos.find((r) => r.repoName === a)
-      const repoB = repos.find((r) => r.repoName === b)
-      if (repoA?.favorite && !repoB?.favorite) return -1
-      if (!repoA?.favorite && repoB?.favorite) return 1
-      return a.localeCompare(b)
-    })
-  }, [filteredBranches, repos])
+      const repoA = repos.find((r) => r.repoName === a);
+      const repoB = repos.find((r) => r.repoName === b);
+      if (repoA?.favorite && !repoB?.favorite) return -1;
+      if (!repoA?.favorite && repoB?.favorite) return 1;
+      return a.localeCompare(b);
+    });
+  }, [filteredBranches, repos]);
 
   const stats = useMemo(() => {
-    const local = branches.filter((b) => b.isLocal).length
-    const remote = branches.filter((b) => b.isRemote && !b.isLocal).length
-    const withWorktree = branches.filter((b) => b.hasWorktree).length
-    return { total: branches.length, local, remote, withWorktree }
-  }, [branches])
+    const local = branches.filter((b) => b.isLocal).length;
+    const remote = branches.filter((b) => b.isRemote && !b.isLocal).length;
+    const withWorktree = branches.filter((b) => b.hasWorktree).length;
+    return { total: branches.length, local, remote, withWorktree };
+  }, [branches]);
 
   const handleDeleteBranch = useCallback((branch: Branch) => {
-    setPendingDeleteBranch(branch)
-    setDeleteModalOpen(true)
-  }, [])
+    setPendingDeleteBranch(branch);
+    setDeleteModalOpen(true);
+  }, []);
 
   const handleConfirmDelete = useCallback(
-    async (branch: Branch, deleteLocal: boolean, deleteRemote: boolean, force: boolean) => {
-      setIsDeleting(true)
+    async (
+      branch: Branch,
+      deleteLocal: boolean,
+      deleteRemote: boolean,
+      force: boolean,
+    ) => {
+      setIsDeleting(true);
       try {
-        const response = await fetch('/api/branches/delete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const response = await fetch("/api/branches/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             repoName: branch.repoName,
             branchName: branch.name,
@@ -103,51 +111,57 @@ export function BranchesView({
             deleteRemote,
             force,
           }),
-        })
+        });
 
         if (!response.ok) {
-          const data = await response.json()
+          const data = await response.json();
           if (data.requiresForce) {
-            onError?.(data.error)
-            return
+            onError?.(data.error);
+            return;
           }
-          throw new Error(data.error || 'Failed to delete branch')
+          throw new Error(data.error || "Failed to delete branch");
         }
 
-        const result = await response.json()
-        const parts: string[] = []
-        if (result.localDeleted) parts.push('local')
-        if (result.remoteDeleted) parts.push('remote')
+        const result = await response.json();
+        const parts: string[] = [];
+        if (result.localDeleted) parts.push("local");
+        if (result.remoteDeleted) parts.push("remote");
 
-        setDeleteModalOpen(false)
-        setPendingDeleteBranch(null)
-        mutate()
-        onSuccess?.(`Deleted ${parts.join(' and ')} branch '${branch.name}'`)
+        setDeleteModalOpen(false);
+        setPendingDeleteBranch(null);
+        mutate();
+        onSuccess?.(`Deleted ${parts.join(" and ")} branch '${branch.name}'`);
       } catch (err) {
-        console.error('Failed to delete branch:', err)
-        onError?.(err instanceof Error ? err.message : 'Failed to delete branch')
+        console.error("Failed to delete branch:", err);
+        onError?.(
+          err instanceof Error ? err.message : "Failed to delete branch",
+        );
       } finally {
-        setIsDeleting(false)
+        setIsDeleting(false);
       }
     },
-    [mutate, onSuccess, onError]
-  )
+    [mutate, onSuccess, onError],
+  );
 
   const handleClearSearch = useCallback(() => {
-    setSearchQuery('')
-  }, [])
+    setSearchQuery("");
+  }, []);
 
   if (error) {
     return (
       <div className="p-6 text-center">
         <p className="text-destructive">Failed to load branches</p>
       </div>
-    )
+    );
   }
 
   return (
     <div className="h-full flex flex-col">
-      <FilterBanner filterValue={filterRepo} filterType="branches" onClearFilter={onClearFilter} />
+      <FilterBanner
+        filterValue={filterRepo}
+        filterType="branches"
+        onClearFilter={onClearFilter}
+      />
 
       <div className="p-4 border-b space-y-3">
         <div className="flex items-center space-x-4">
@@ -176,10 +190,10 @@ export function BranchesView({
             <button
               onClick={() => setIncludeRemote(!includeRemote)}
               className={clsx(
-                'flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-sm transition-colors border',
+                "flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-sm transition-colors border",
                 includeRemote
-                  ? 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700'
-                  : 'bg-background text-muted-foreground border-border hover:bg-muted'
+                  ? "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700"
+                  : "bg-background text-muted-foreground border-border hover:bg-muted",
               )}
             >
               <Globe className="w-3.5 h-3.5" />
@@ -190,13 +204,15 @@ export function BranchesView({
               <button
                 onClick={() => setFavoritesOnly(!favoritesOnly)}
                 className={clsx(
-                  'flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-sm transition-colors border',
+                  "flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-sm transition-colors border",
                   favoritesOnly
-                    ? 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700'
-                    : 'bg-background text-muted-foreground border-border hover:bg-muted'
+                    ? "bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700"
+                    : "bg-background text-muted-foreground border-border hover:bg-muted",
                 )}
               >
-                <span>{favoritesOnly ? '★ Favorites Only' : '☆ All Repos'}</span>
+                <span>
+                  {favoritesOnly ? "★ Favorites Only" : "☆ All Repos"}
+                </span>
               </button>
             )}
           </div>
@@ -228,17 +244,17 @@ export function BranchesView({
               {filterRepo
                 ? `No branches found for ${filterRepo}`
                 : searchQuery
-                  ? 'No branches found matching your search'
+                  ? "No branches found matching your search"
                   : favoritesOnly
-                    ? 'No branches found in favorite repositories'
-                    : 'No branches found'}
+                    ? "No branches found in favorite repositories"
+                    : "No branches found"}
             </p>
           </div>
         ) : (
           <div>
             {branchesByRepo.map(([repoName, repoBranches]) => {
-              const repo = repos.find((r) => r.repoName === repoName)
-              const isFavorite = repo?.favorite
+              const repo = repos.find((r) => r.repoName === repoName);
+              const isFavorite = repo?.favorite;
 
               return (
                 <div key={repoName}>
@@ -250,10 +266,12 @@ export function BranchesView({
                     onToggleFilter={onFilterByRepository}
                     onClearFilter={onClearFilter}
                     actionButton={{
-                      label: 'Create Worktree',
-                      onClick: () => {/* TODO: Implement create worktree from branch */},
+                      label: "Create Worktree",
+                      onClick: () => {
+                        /* TODO: Implement create worktree from branch */
+                      },
                       icon: <GitBranchPlus className="w-4 h-4 mr-1" />,
-                      variant: 'primary'
+                      variant: "primary",
                     }}
                   />
 
@@ -266,7 +284,7 @@ export function BranchesView({
                       <div>
                         {repoBranches.map((branch) => (
                           <BranchRow
-                            key={`${branch.repoName}-${branch.name}-${branch.isLocal ? 'l' : ''}${branch.isRemote ? 'r' : ''}`}
+                            key={`${branch.repoName}-${branch.name}-${branch.isLocal ? "l" : ""}${branch.isRemote ? "r" : ""}`}
                             branch={branch}
                             onJumpToWorktree={onJumpToWorktree}
                             onCreateWorktree={onCreateWorktree}
@@ -277,7 +295,7 @@ export function BranchesView({
                     )}
                   </div>
                 </div>
-              )
+              );
             })}
           </div>
         )}
@@ -286,13 +304,13 @@ export function BranchesView({
       <DeleteBranchModal
         isOpen={deleteModalOpen}
         onClose={() => {
-          setDeleteModalOpen(false)
-          setPendingDeleteBranch(null)
+          setDeleteModalOpen(false);
+          setPendingDeleteBranch(null);
         }}
         branch={pendingDeleteBranch}
         onConfirm={handleConfirmDelete}
         isLoading={isDeleting}
       />
     </div>
-  )
+  );
 }

@@ -1,550 +1,657 @@
-import { EventEmitter } from 'events'
-import { exec } from 'child_process'
-import { promisify } from 'util'
-import { PRNotification } from '@/types/github'
-import { getConfig } from '@/lib/config'
-import { TokenBucket } from '@/lib/tokenBucket'
+import { EventEmitter } from "events";
+import { exec } from "child_process";
+import { promisify } from "util";
+import { PRNotification } from "@/types/github";
+import { getConfig } from "@/lib/config";
+import { TokenBucket } from "@/lib/tokenBucket";
 
-const execAsync = promisify(exec)
+const execAsync = promisify(exec);
 
-const PERSIST_PATH = '/tmp/git-workbench-pr-worker-cache.json'
+const PERSIST_PATH = "/tmp/git-workbench-pr-worker-cache.json";
 
 type WorkerStatus =
-  | { type: 'starting' }
-  | { type: 'running' }
-  | { type: 'rate_limited'; retryAfterMs: number; message: string }
-  | { type: 'error'; message: string }
+  | { type: "starting" }
+  | { type: "running" }
+  | { type: "rate_limited"; retryAfterMs: number; message: string }
+  | { type: "error"; message: string };
 
 type WorkerEvent =
-  | { type: 'snapshot'; pullRequests: PRNotification[]; asOf: number }
-  | { type: 'pr'; pullRequest: PRNotification; asOf: number }
-  | { type: 'status'; status: WorkerStatus; asOf: number }
-  | { type: 'heartbeat'; asOf: number }
+  | { type: "snapshot"; pullRequests: PRNotification[]; asOf: number }
+  | { type: "pr"; pullRequest: PRNotification; asOf: number }
+  | { type: "status"; status: WorkerStatus; asOf: number }
+  | { type: "heartbeat"; asOf: number };
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
-    const t = setTimeout(resolve, ms)
-    if (!signal) return
+    const t = setTimeout(resolve, ms);
+    if (!signal) return;
 
     const onAbort = () => {
-      clearTimeout(t)
-      reject(new Error('Aborted'))
-    }
+      clearTimeout(t);
+      reject(new Error("Aborted"));
+    };
 
     if (signal.aborted) {
-      onAbort()
-      return
+      onAbort();
+      return;
     }
 
-    signal.addEventListener('abort', onAbort, { once: true })
-  })
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 function isRateLimitError(err: unknown): string | null {
-  const parts: string[] = []
+  const parts: string[] = [];
 
   if (err instanceof Error) {
-    parts.push(err.message || '')
-    const anyErr = err as unknown as { stderr?: unknown; stdout?: unknown }
-    if (typeof anyErr.stderr === 'string') parts.push(anyErr.stderr)
-    if (typeof anyErr.stdout === 'string') parts.push(anyErr.stdout)
-  } else if (typeof err === 'object' && err !== null) {
-    const anyErr = err as { message?: unknown; stderr?: unknown; stdout?: unknown }
-    if (typeof anyErr.message === 'string') parts.push(anyErr.message)
-    if (typeof anyErr.stderr === 'string') parts.push(anyErr.stderr)
-    if (typeof anyErr.stdout === 'string') parts.push(anyErr.stdout)
+    parts.push(err.message || "");
+    const anyErr = err as unknown as { stderr?: unknown; stdout?: unknown };
+    if (typeof anyErr.stderr === "string") parts.push(anyErr.stderr);
+    if (typeof anyErr.stdout === "string") parts.push(anyErr.stdout);
+  } else if (typeof err === "object" && err !== null) {
+    const anyErr = err as {
+      message?: unknown;
+      stderr?: unknown;
+      stdout?: unknown;
+    };
+    if (typeof anyErr.message === "string") parts.push(anyErr.message);
+    if (typeof anyErr.stderr === "string") parts.push(anyErr.stderr);
+    if (typeof anyErr.stdout === "string") parts.push(anyErr.stdout);
   }
 
-  const haystack = parts.join('\n').toLowerCase()
-  if (haystack.includes('secondary rate limit') || haystack.includes('api rate limit exceeded') || haystack.includes('rate limit')) {
-    return parts.join('\n')
+  const haystack = parts.join("\n").toLowerCase();
+  if (
+    haystack.includes("secondary rate limit") ||
+    haystack.includes("api rate limit exceeded") ||
+    haystack.includes("rate limit")
+  ) {
+    return parts.join("\n");
   }
 
-  return null
+  return null;
 }
 
 function keyForPR(pr: PRNotification): string {
-  return pr.url
+  return pr.url;
 }
 
-type RequestKind = 'user_query' | 'favorite_repo' | 'notifications' | 'whoami'
+type RequestKind = "user_query" | "favorite_repo" | "notifications" | "whoami";
 
 const REQUEST_COST: Record<RequestKind, number> = {
   whoami: 1,
   notifications: 2,
   user_query: 4,
-  favorite_repo: 4
-}
+  favorite_repo: 4,
+};
 
 export class PullRequestsWorker {
-  private readonly emitter = new EventEmitter()
-  private readonly bucket: TokenBucket
+  private readonly emitter = new EventEmitter();
+  private readonly bucket: TokenBucket;
 
-  private started = false
-  private running = false
-  private abortController: AbortController | null = null
-  private readyPromise: Promise<void> | null = null
-  private resolveReady: (() => void) | null = null
+  private started = false;
+  private running = false;
+  private abortController: AbortController | null = null;
+  private readyPromise: Promise<void> | null = null;
+  private resolveReady: (() => void) | null = null;
 
-  private username: string | null = null
-  private store = new Map<string, PRNotification>()
-  private lastSnapshotMs = 0
-  private lastStatus: WorkerStatus = { type: 'starting' }
-  private lastStatusAsOf = 0
+  private username: string | null = null;
+  private store = new Map<string, PRNotification>();
+  private lastSnapshotMs = 0;
+  private lastStatus: WorkerStatus = { type: "starting" };
+  private lastStatusAsOf = 0;
 
   public constructor() {
-    this.bucket = new TokenBucket(20, 1, 0)
-    this.readyPromise = new Promise(resolve => {
-      this.resolveReady = resolve
-    })
-    void this.loadPersistedStore()
+    this.bucket = new TokenBucket(20, 1, 0);
+    this.readyPromise = new Promise((resolve) => {
+      this.resolveReady = resolve;
+    });
+    void this.loadPersistedStore();
   }
 
   private async loadPersistedStore() {
     try {
-      const fs = await import('fs/promises')
-      const raw = await fs.readFile(PERSIST_PATH, 'utf-8')
-      const parsed = JSON.parse(raw) as { asOf: number; pullRequests: PRNotification[] }
-      if (!parsed?.pullRequests?.length) return
+      const fs = await import("fs/promises");
+      const raw = await fs.readFile(PERSIST_PATH, "utf-8");
+      const parsed = JSON.parse(raw) as {
+        asOf: number;
+        pullRequests: PRNotification[];
+      };
+      if (!parsed?.pullRequests?.length) return;
 
-      this.store = new Map(parsed.pullRequests.map(pr => [keyForPR(pr), pr]))
-      this.lastSnapshotMs = parsed.asOf || 0
-      this.emit({ type: 'snapshot', pullRequests: Array.from(this.store.values()), asOf: this.lastSnapshotMs || Date.now() })
+      this.store = new Map(parsed.pullRequests.map((pr) => [keyForPR(pr), pr]));
+      this.lastSnapshotMs = parsed.asOf || 0;
+      this.emit({
+        type: "snapshot",
+        pullRequests: Array.from(this.store.values()),
+        asOf: this.lastSnapshotMs || Date.now(),
+      });
     } catch {
       // ignore
     } finally {
-      this.resolveReady?.()
+      this.resolveReady?.();
     }
   }
 
   private async persistStore() {
     try {
-      const fs = await import('fs/promises')
+      const fs = await import("fs/promises");
       const payload = {
         asOf: this.lastSnapshotMs,
-        pullRequests: Array.from(this.store.values())
-      }
-      await fs.writeFile(PERSIST_PATH, JSON.stringify(payload), 'utf-8')
+        pullRequests: Array.from(this.store.values()),
+      };
+      await fs.writeFile(PERSIST_PATH, JSON.stringify(payload), "utf-8");
     } catch {
       // ignore
     }
   }
 
   public ensureStarted() {
-    if (this.started) return
-    this.started = true
+    if (this.started) return;
+    this.started = true;
     if (!this.abortController) {
-      this.abortController = new AbortController()
+      this.abortController = new AbortController();
     }
-    void this.loop(this.abortController.signal)
+    void this.loop(this.abortController.signal);
   }
 
   public stop() {
-    this.abortController?.abort()
-    this.abortController = null
-    this.started = false
+    this.abortController?.abort();
+    this.abortController = null;
+    this.started = false;
   }
 
   public whenReady(): Promise<void> {
-    return this.readyPromise || Promise.resolve()
+    return this.readyPromise || Promise.resolve();
   }
 
   public getSnapshot(): {
-    pullRequests: PRNotification[]
-    asOf: number
-    status: WorkerStatus
-    statusAsOf: number
+    pullRequests: PRNotification[];
+    asOf: number;
+    status: WorkerStatus;
+    statusAsOf: number;
   } {
-    const prs = Array.from(this.store.values())
+    const prs = Array.from(this.store.values());
     return {
       pullRequests: prs,
       asOf: this.lastSnapshotMs || Date.now(),
       status: this.lastStatus,
-      statusAsOf: this.lastStatusAsOf
-    }
+      statusAsOf: this.lastStatusAsOf,
+    };
   }
 
   public onEvent(listener: (evt: WorkerEvent) => void): () => void {
-    this.emitter.on('event', listener)
-    return () => this.emitter.off('event', listener)
+    this.emitter.on("event", listener);
+    return () => this.emitter.off("event", listener);
   }
 
   private emit(evt: WorkerEvent) {
-    if (evt.type === 'status') {
-      this.lastStatus = evt.status
-      this.lastStatusAsOf = evt.asOf
+    if (evt.type === "status") {
+      this.lastStatus = evt.status;
+      this.lastStatusAsOf = evt.asOf;
     }
-    this.emitter.emit('event', evt)
+    this.emitter.emit("event", evt);
   }
 
-  private async ghJson<T>(command: string, kind: RequestKind, signal: AbortSignal): Promise<T> {
-    await this.bucket.waitAndConsume(REQUEST_COST[kind], signal)
-    const { stdout } = await execAsync(command, { timeout: 20000 })
-    
+  private async ghJson<T>(
+    command: string,
+    kind: RequestKind,
+    signal: AbortSignal,
+  ): Promise<T> {
+    await this.bucket.waitAndConsume(REQUEST_COST[kind], signal);
+    const { stdout } = await execAsync(command, { timeout: 20000 });
+
     // Handle empty or malformed responses
-    if (!stdout || stdout.trim() === '') {
-      throw new Error('Empty response from GitHub API')
+    if (!stdout || stdout.trim() === "") {
+      throw new Error("Empty response from GitHub API");
     }
-    
+
     try {
-      return JSON.parse(stdout) as T
+      return JSON.parse(stdout) as T;
     } catch (error) {
-      console.error(`Failed to parse JSON from command: ${command}`)
-      console.error(`Raw output: ${stdout}`)
-      throw new Error(`Invalid JSON response: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error(`Failed to parse JSON from command: ${command}`);
+      console.error(`Raw output: ${stdout}`);
+      throw new Error(
+        `Invalid JSON response: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
-  private async ghText(command: string, kind: RequestKind, signal: AbortSignal): Promise<string> {
-    await this.bucket.waitAndConsume(REQUEST_COST[kind], signal)
-    const { stdout } = await execAsync(command, { timeout: 20000 })
-    return stdout.trim()
+  private async ghText(
+    command: string,
+    kind: RequestKind,
+    signal: AbortSignal,
+  ): Promise<string> {
+    await this.bucket.waitAndConsume(REQUEST_COST[kind], signal);
+    const { stdout } = await execAsync(command, { timeout: 20000 });
+    return stdout.trim();
   }
 
   private async getUsername(signal: AbortSignal): Promise<string> {
-    if (this.username) return this.username
-    const login = await this.ghText("gh api user --jq '.login'", 'whoami', signal)
-    this.username = login
-    return this.username
+    if (this.username) return this.username;
+    const login = await this.ghText(
+      "gh api user --jq '.login'",
+      "whoami",
+      signal,
+    );
+    this.username = login;
+    return this.username;
   }
 
   private upsert(pr: PRNotification, asOf: number) {
-    const key = keyForPR(pr)
-    const prev = this.store.get(key)
+    const key = keyForPR(pr);
+    const prev = this.store.get(key);
 
     if (!prev) {
-      this.store.set(key, pr)
-      this.emit({ type: 'pr', pullRequest: pr, asOf })
-      return
+      this.store.set(key, pr);
+      this.emit({ type: "pr", pullRequest: pr, asOf });
+      return;
     }
 
-    if (prev.updatedAt !== pr.updatedAt || prev.reviewDecision !== pr.reviewDecision || prev.draft !== pr.draft) {
-      this.store.set(key, pr)
-      this.emit({ type: 'pr', pullRequest: pr, asOf })
+    if (
+      prev.updatedAt !== pr.updatedAt ||
+      prev.reviewDecision !== pr.reviewDecision ||
+      prev.draft !== pr.draft
+    ) {
+      this.store.set(key, pr);
+      this.emit({ type: "pr", pullRequest: pr, asOf });
     }
   }
 
-  private normalize(pr: any, reason: PRNotification['reason'], repository?: string): PRNotification {
+  private normalize(
+    pr: any,
+    reason: PRNotification["reason"],
+    repository?: string,
+  ): PRNotification {
     return {
       title: pr.title,
       reason,
       url: pr.url,
       html_url: pr.url,
-      state: (pr.state || 'OPEN').toLowerCase() as PRNotification['state'],
-      repository: repository || pr.repository?.nameWithOwner || pr.repository?.fullName || pr.repository || 'Unknown',
+      state: (pr.state || "OPEN").toLowerCase() as PRNotification["state"],
+      repository:
+        repository ||
+        pr.repository?.nameWithOwner ||
+        pr.repository?.fullName ||
+        pr.repository ||
+        "Unknown",
       number: pr.number,
       headRef: pr.headRefName || pr.headRef || `pr-${pr.number}`,
       reviewDecision: pr.reviewDecision,
-      merged: Boolean(pr.merged) || pr.state === 'MERGED',
+      merged: Boolean(pr.merged) || pr.state === "MERGED",
       draft: Boolean(pr.isDraft),
       closedAt: pr.closedAt,
       updatedAt: pr.updatedAt,
       createdAt: pr.createdAt,
       author: {
-        login: pr.author?.login || pr.author?.name || 'Unknown',
-        avatarUrl: pr.author?.avatarUrl
-      }
-    }
+        login: pr.author?.login || pr.author?.name || "Unknown",
+        avatarUrl: pr.author?.avatarUrl,
+      },
+    };
   }
 
-  private async fetchNotifications(signal: AbortSignal): Promise<PRNotification[]> {
+  private async fetchNotifications(
+    signal: AbortSignal,
+  ): Promise<PRNotification[]> {
     try {
-      const notifications = await this.ghJson<any[]>(`gh api notifications --paginate`, 'notifications', signal)
-      
+      const notifications = await this.ghJson<any[]>(
+        `gh api notifications --paginate`,
+        "notifications",
+        signal,
+      );
+
       // Ensure notifications is an array
-      const notificationsArray = Array.isArray(notifications) ? notifications : []
-      const prNotifs = notificationsArray.filter((n: any) => n.subject?.type === 'PullRequest')
+      const notificationsArray = Array.isArray(notifications)
+        ? notifications
+        : [];
+      const prNotifs = notificationsArray.filter(
+        (n: any) => n.subject?.type === "PullRequest",
+      );
 
-    const results: PRNotification[] = []
-    for (const n of prNotifs) {
-      const url: string | undefined = n.subject?.url
-      if (!url) continue
+      const results: PRNotification[] = [];
+      for (const n of prNotifs) {
+        const url: string | undefined = n.subject?.url;
+        if (!url) continue;
 
-      const match = url.match(/https:\/\/api\.github\.com\/repos\/([^/]+\/[^/]+)\/pulls\/(\d+)/)
-      if (!match) continue
+        const match = url.match(
+          /https:\/\/api\.github\.com\/repos\/([^/]+\/[^/]+)\/pulls\/(\d+)/,
+        );
+        if (!match) continue;
 
-      const repo = match[1]
-      const num = Number(match[2])
+        const repo = match[1];
+        const num = Number(match[2]);
 
-      try {
-        // Fetch full PR details to get the actual branch name
-        console.log(`Fetching PR details: gh api repos/${repo}/pulls/${num}`)
-        const prDetails = await this.ghJson<any>(
-          `gh api repos/${repo}/pulls/${num}`,
-          'notifications',
-          signal
-        )
+        try {
+          // Fetch full PR details to get the actual branch name
+          console.log(`Fetching PR details: gh api repos/${repo}/pulls/${num}`);
+          const prDetails = await this.ghJson<any>(
+            `gh api repos/${repo}/pulls/${num}`,
+            "notifications",
+            signal,
+          );
 
-        results.push(
-          this.normalize(
-            {
-              title: prDetails.title || n.subject?.title || `PR #${num}`,
-              url: prDetails.html_url || `https://github.com/${repo}/pull/${num}`,
-              state: prDetails.state || 'OPEN',
-              number: prDetails.number || num,
-              headRefName: prDetails.head?.ref || `pr-${num}`,
-              updatedAt: prDetails.updated_at || n.updated_at || new Date().toISOString(),
-              createdAt: prDetails.created_at || n.updated_at || new Date().toISOString(),
-              isDraft: prDetails.draft || false,
-              author: prDetails.user || { login: 'Unknown' },
-              reviewDecision: prDetails.review_decision,
-              merged: prDetails.merged || false,
-              closedAt: prDetails.closed_at
-            },
-            'notification',
-            repo
-          )
-        )
-      } catch (error) {
-        // Fallback to basic notification data if PR details fetch fails
-        console.warn(`Failed to fetch details for PR #${num} in ${repo}:`, error)
-        results.push(
-          this.normalize(
-            {
-              title: n.subject?.title || `PR #${num}`,
-              url: `https://github.com/${repo}/pull/${num}`,
-              state: 'OPEN',
-              number: num,
-              headRefName: `pr-${num}`,
-              updatedAt: n.updated_at || new Date().toISOString(),
-              createdAt: n.updated_at || new Date().toISOString(),
-              isDraft: false,
-              author: { login: 'Unknown' }
-            },
-            'notification',
-            repo
-          )
-        )
+          results.push(
+            this.normalize(
+              {
+                title: prDetails.title || n.subject?.title || `PR #${num}`,
+                url:
+                  prDetails.html_url ||
+                  `https://github.com/${repo}/pull/${num}`,
+                state: prDetails.state || "OPEN",
+                number: prDetails.number || num,
+                headRefName: prDetails.head?.ref || `pr-${num}`,
+                updatedAt:
+                  prDetails.updated_at ||
+                  n.updated_at ||
+                  new Date().toISOString(),
+                createdAt:
+                  prDetails.created_at ||
+                  n.updated_at ||
+                  new Date().toISOString(),
+                isDraft: prDetails.draft || false,
+                author: prDetails.user || { login: "Unknown" },
+                reviewDecision: prDetails.review_decision,
+                merged: prDetails.merged || false,
+                closedAt: prDetails.closed_at,
+              },
+              "notification",
+              repo,
+            ),
+          );
+        } catch (error) {
+          // Fallback to basic notification data if PR details fetch fails
+          console.warn(
+            `Failed to fetch details for PR #${num} in ${repo}:`,
+            error,
+          );
+          results.push(
+            this.normalize(
+              {
+                title: n.subject?.title || `PR #${num}`,
+                url: `https://github.com/${repo}/pull/${num}`,
+                state: "OPEN",
+                number: num,
+                headRefName: `pr-${num}`,
+                updatedAt: n.updated_at || new Date().toISOString(),
+                createdAt: n.updated_at || new Date().toISOString(),
+                isDraft: false,
+                author: { login: "Unknown" },
+              },
+              "notification",
+              repo,
+            ),
+          );
+        }
       }
-    }
 
-    return results
+      return results;
     } catch (error) {
-      console.error('Failed to fetch notifications:', error)
-      return []
+      console.error("Failed to fetch notifications:", error);
+      return [];
     }
   }
 
-  private async fetchUserQueries(username: string, signal: AbortSignal): Promise<PRNotification[]> {
+  private async fetchUserQueries(
+    username: string,
+    signal: AbortSignal,
+  ): Promise<PRNotification[]> {
     try {
       const queries = [
-        { q: `state:open author:${username}`, reason: 'author' as const },
-        { q: `state:open review-requested:${username}`, reason: 'review_requested' as const },
-        { q: `state:open reviewed-by:${username}`, reason: 'reviewed' as const },
-        { q: `state:open commenter:${username}`, reason: 'commenter' as const }
-      ]
+        { q: `state:open author:${username}`, reason: "author" as const },
+        {
+          q: `state:open review-requested:${username}`,
+          reason: "review_requested" as const,
+        },
+        {
+          q: `state:open reviewed-by:${username}`,
+          reason: "reviewed" as const,
+        },
+        { q: `state:open commenter:${username}`, reason: "commenter" as const },
+      ];
 
-      const results: PRNotification[] = []
+      const results: PRNotification[] = [];
       for (const { q, reason } of queries) {
         const prs = await this.ghJson<any[]>(
           `gh search prs "${q}" --limit 100 --json number,title,state,url,repository,author,updatedAt,createdAt,closedAt,isDraft`,
-          'user_query',
-          signal
-        )
+          "user_query",
+          signal,
+        );
 
         // Ensure prs is an array
-        const prsArray = Array.isArray(prs) ? prs : []
+        const prsArray = Array.isArray(prs) ? prs : [];
 
-      // Fetch detailed PR info for each PR to get the branch name
-      for (const pr of prsArray) {
-        const state = typeof pr.state === 'string' ? pr.state.toLowerCase() : 'open'
-        if (state !== 'open') {
-          continue
-        }
-        try {
-          const repoName = pr.repository?.nameWithOwner || pr.repository?.fullName || pr.repository
-          if (repoName && pr.number) {
-            console.log(`Fetching user query PR details: gh api repos/${repoName}/pulls/${pr.number}`)
-            const prDetails = await this.ghJson<any>(
-              `gh api repos/${repoName}/pulls/${pr.number}`,
-              'user_query',
-              signal
-            )
-            // Merge the search results with detailed PR info
-            const mergedPR = {
-              ...pr,
-              headRefName: prDetails.head?.ref || `pr-${pr.number}`
-            }
-            results.push(this.normalize(mergedPR, reason))
-          } else {
-            results.push(this.normalize(pr, reason))
+        // Fetch detailed PR info for each PR to get the branch name
+        for (const pr of prsArray) {
+          const state =
+            typeof pr.state === "string" ? pr.state.toLowerCase() : "open";
+          if (state !== "open") {
+            continue;
           }
-        } catch (error) {
-          // Fallback to basic PR data if details fetch fails
-          console.warn(`Failed to fetch details for PR #${pr.number}:`, error)
-          results.push(this.normalize(pr, reason))
+          try {
+            const repoName =
+              pr.repository?.nameWithOwner ||
+              pr.repository?.fullName ||
+              pr.repository;
+            if (repoName && pr.number) {
+              console.log(
+                `Fetching user query PR details: gh api repos/${repoName}/pulls/${pr.number}`,
+              );
+              const prDetails = await this.ghJson<any>(
+                `gh api repos/${repoName}/pulls/${pr.number}`,
+                "user_query",
+                signal,
+              );
+              // Merge the search results with detailed PR info
+              const mergedPR = {
+                ...pr,
+                headRefName: prDetails.head?.ref || `pr-${pr.number}`,
+              };
+              results.push(this.normalize(mergedPR, reason));
+            } else {
+              results.push(this.normalize(pr, reason));
+            }
+          } catch (error) {
+            // Fallback to basic PR data if details fetch fails
+            console.warn(
+              `Failed to fetch details for PR #${pr.number}:`,
+              error,
+            );
+            results.push(this.normalize(pr, reason));
+          }
         }
       }
-    }
 
-    const seen = new Set<string>()
-    return results.filter(pr => {
-      const key = pr.url
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
+      const seen = new Set<string>();
+      return results.filter((pr) => {
+        const key = pr.url;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
     } catch (error) {
-      console.error('Failed to fetch user queries:', error)
-      return []
+      console.error("Failed to fetch user queries:", error);
+      return [];
     }
   }
 
-  private async fetchFavorites(favorites: string[], signal: AbortSignal): Promise<PRNotification[]> {
+  private async fetchFavorites(
+    favorites: string[],
+    signal: AbortSignal,
+  ): Promise<PRNotification[]> {
     try {
-      const results: PRNotification[] = []
-      const allPRs: Array<{ pr: any; repo: string }> = []
+      const results: PRNotification[] = [];
+      const allPRs: Array<{ pr: any; repo: string }> = [];
 
       for (const repo of favorites) {
         try {
           const prs = await this.ghJson<any[]>(
             `gh search prs --repo "${repo}" --limit 50 --json title,url,state,number,closedAt,updatedAt,createdAt,author,repository,isDraft`,
-            'favorite_repo',
-            signal
-          )
+            "favorite_repo",
+            signal,
+          );
 
           // Ensure prs is an array
-          const prsArray = Array.isArray(prs) ? prs : []
-          
+          const prsArray = Array.isArray(prs) ? prs : [];
+
           for (const pr of prsArray) {
-            allPRs.push({ pr, repo })
+            allPRs.push({ pr, repo });
           }
         } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err)
-          if (msg.includes('cannot be searched') || msg.includes('do not have permission') || msg.includes('Invalid search query')) {
-            console.warn(`Skipping inaccessible favorite repo: ${repo} - ${msg}`)
-            continue
+          const msg = err instanceof Error ? err.message : String(err);
+          if (
+            msg.includes("cannot be searched") ||
+            msg.includes("do not have permission") ||
+            msg.includes("Invalid search query")
+          ) {
+            console.warn(
+              `Skipping inaccessible favorite repo: ${repo} - ${msg}`,
+            );
+            continue;
           }
-          throw err
+          throw err;
         }
       }
 
-    const prsByRepo = new Map<string, any[]>()
-    for (const { pr, repo } of allPRs) {
-      if (!prsByRepo.has(repo)) {
-        prsByRepo.set(repo, [])
+      const prsByRepo = new Map<string, any[]>();
+      for (const { pr, repo } of allPRs) {
+        if (!prsByRepo.has(repo)) {
+          prsByRepo.set(repo, []);
+        }
+        prsByRepo.get(repo)!.push(pr);
       }
-      prsByRepo.get(repo)!.push(pr)
-    }
 
-    for (const [repo, prs] of Array.from(prsByRepo.entries())) {
-      const prNumbers = prs.map((pr: any) => pr.number).join(' ')
-      if (!prNumbers) continue
+      for (const [repo, prs] of Array.from(prsByRepo.entries())) {
+        const prNumbers = prs.map((pr: any) => pr.number).join(" ");
+        if (!prNumbers) continue;
 
-      try {
-        const prDetails = await this.ghJson<any>(
-          `gh api repos/${repo}/pulls --paginate --jq '.[] | select(.number == ${prs.map((p: any) => p.number).join(' or .number == ')})'`,
-          'favorite_repo',
-          signal
-        )
+        try {
+          const prDetails = await this.ghJson<any>(
+            `gh api repos/${repo}/pulls --paginate --jq '.[] | select(.number == ${prs.map((p: any) => p.number).join(" or .number == ")})'`,
+            "favorite_repo",
+            signal,
+          );
 
-        // Ensure prDetails is an array
-        const detailsArray = Array.isArray(prDetails) ? prDetails : [prDetails].filter(Boolean)
-        const detailsMap = new Map(detailsArray.map(pr => [pr.number, pr]))
+          // Ensure prDetails is an array
+          const detailsArray = Array.isArray(prDetails)
+            ? prDetails
+            : [prDetails].filter(Boolean);
+          const detailsMap = new Map(detailsArray.map((pr) => [pr.number, pr]));
 
-        for (const pr of prs) {
-          const details = detailsMap.get(pr.number)
-          if (details) {
-            const mergedPR = {
-              ...pr,
-              headRefName: details.head?.ref || pr.headRefName || `pr-${pr.number}`,
-              state: details.state,
-              merged: details.merged,
-              closedAt: details.closed_at,
-              updatedAt: details.updated_at
+          for (const pr of prs) {
+            const details = detailsMap.get(pr.number);
+            if (details) {
+              const mergedPR = {
+                ...pr,
+                headRefName:
+                  details.head?.ref || pr.headRefName || `pr-${pr.number}`,
+                state: details.state,
+                merged: details.merged,
+                closedAt: details.closed_at,
+                updatedAt: details.updated_at,
+              };
+              results.push(this.normalize(mergedPR, "favorite", repo));
+            } else {
+              results.push(this.normalize(pr, "favorite", repo));
             }
-            results.push(this.normalize(mergedPR, 'favorite', repo))
-          } else {
-            results.push(this.normalize(pr, 'favorite', repo))
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch batch details for ${repo}:`, error);
+          for (const pr of prs) {
+            results.push(this.normalize(pr, "favorite", repo));
           }
         }
-      } catch (error) {
-        console.warn(`Failed to fetch batch details for ${repo}:`, error)
-        for (const pr of prs) {
-          results.push(this.normalize(pr, 'favorite', repo))
-        }
       }
-    }
 
-    return results
+      return results;
     } catch (error) {
-      console.error('Failed to fetch favorites:', error)
-      return []
+      console.error("Failed to fetch favorites:", error);
+      return [];
     }
   }
 
   private async loop(signal: AbortSignal) {
-    const asOf = Date.now()
-    this.emit({ type: 'status', status: { type: 'starting' }, asOf })
+    const asOf = Date.now();
+    this.emit({ type: "status", status: { type: "starting" }, asOf });
 
-    if (this.running) return
-    this.running = true
+    if (this.running) return;
+    this.running = true;
 
-    let cooldownUntil = 0
+    let cooldownUntil = 0;
 
     try {
       while (!signal.aborted) {
-        const now = Date.now()
+        const now = Date.now();
 
         if (now < cooldownUntil) {
-          await sleep(Math.min(1000, cooldownUntil - now), signal)
-          continue
+          await sleep(Math.min(1000, cooldownUntil - now), signal);
+          continue;
         }
 
         try {
-          const username = await this.getUsername(signal)
-          const config = await getConfig()
+          const username = await this.getUsername(signal);
+          const config = await getConfig();
           const favorites = (config.repos || [])
-            .filter(r => r.favorite)
-            .filter(r => r.sshUrl || r.httpsUrl) // Only include repos with URLs
-            .map(r => r.fullName || r.repoName)
-            .filter((v): v is string => Boolean(v))
+            .filter((r) => r.favorite)
+            .filter((r) => r.sshUrl || r.httpsUrl) // Only include repos with URLs
+            .map((r) => r.fullName || r.repoName)
+            .filter((v): v is string => Boolean(v));
 
-          const cycleAsOf = Date.now()
-          this.emit({ type: 'status', status: { type: 'running' }, asOf: cycleAsOf })
+          const cycleAsOf = Date.now();
+          this.emit({
+            type: "status",
+            status: { type: "running" },
+            asOf: cycleAsOf,
+          });
 
-          const notifications = await this.fetchNotifications(signal)
-          for (const pr of notifications) this.upsert(pr, cycleAsOf)
+          const notifications = await this.fetchNotifications(signal);
+          for (const pr of notifications) this.upsert(pr, cycleAsOf);
 
-          const userPRs = await this.fetchUserQueries(username, signal)
-          for (const pr of userPRs) this.upsert(pr, cycleAsOf)
+          const userPRs = await this.fetchUserQueries(username, signal);
+          for (const pr of userPRs) this.upsert(pr, cycleAsOf);
 
-          const favPRs = await this.fetchFavorites(favorites, signal)
-          for (const pr of favPRs) this.upsert(pr, cycleAsOf)
+          const favPRs = await this.fetchFavorites(favorites, signal);
+          for (const pr of favPRs) this.upsert(pr, cycleAsOf);
 
-          this.lastSnapshotMs = cycleAsOf
-          this.emit({ type: 'snapshot', pullRequests: Array.from(this.store.values()), asOf: cycleAsOf })
-          void this.persistStore()
+          this.lastSnapshotMs = cycleAsOf;
+          this.emit({
+            type: "snapshot",
+            pullRequests: Array.from(this.store.values()),
+            asOf: cycleAsOf,
+          });
+          void this.persistStore();
 
-          this.emit({ type: 'heartbeat', asOf: Date.now() })
-          await sleep(1000, signal)
+          this.emit({ type: "heartbeat", asOf: Date.now() });
+          await sleep(1000, signal);
         } catch (err) {
-          const rateMsg = isRateLimitError(err)
+          const rateMsg = isRateLimitError(err);
           if (rateMsg) {
-            const retryAfterMs = 2 * 60 * 1000
-            cooldownUntil = Date.now() + retryAfterMs
+            const retryAfterMs = 2 * 60 * 1000;
+            cooldownUntil = Date.now() + retryAfterMs;
             this.emit({
-              type: 'status',
-              status: { type: 'rate_limited', retryAfterMs, message: rateMsg },
-              asOf: Date.now()
-            })
-            continue
+              type: "status",
+              status: { type: "rate_limited", retryAfterMs, message: rateMsg },
+              asOf: Date.now(),
+            });
+            continue;
           }
 
-          const msg = err instanceof Error ? err.message : 'Unknown error'
-          this.emit({ type: 'status', status: { type: 'error', message: msg }, asOf: Date.now() })
-          await sleep(5000, signal)
+          const msg = err instanceof Error ? err.message : "Unknown error";
+          this.emit({
+            type: "status",
+            status: { type: "error", message: msg },
+            asOf: Date.now(),
+          });
+          await sleep(5000, signal);
         }
       }
     } finally {
-      this.running = false
+      this.running = false;
     }
   }
 }
 
-let singleton: PullRequestsWorker | null = null
+let singleton: PullRequestsWorker | null = null;
 
 export function getPullRequestsWorker(): PullRequestsWorker {
-  if (!singleton) singleton = new PullRequestsWorker()
-  return singleton
+  if (!singleton) singleton = new PullRequestsWorker();
+  return singleton;
 }

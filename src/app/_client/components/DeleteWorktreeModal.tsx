@@ -1,15 +1,15 @@
-import React, { useState } from 'react'
-import { Modal } from './ui/Modal'
-import { Button } from './ui/Button'
-import { Worktree, WorktreeStatus } from '@/types/worktrees'
+import React, { useState } from "react";
+import { Modal } from "./ui/Modal";
+import { Button } from "./ui/Button";
+import { Worktree, WorktreeStatus } from "@/types/worktrees";
 
 interface DeleteWorktreeModalProps {
-  isOpen: boolean
-  onClose: () => void
-  worktree: Worktree | null
-  status: WorktreeStatus | null
-  onConfirm: () => void
-  isLoading?: boolean
+  isOpen: boolean;
+  onClose: () => void;
+  worktree: Worktree | null;
+  status: WorktreeStatus | null;
+  onConfirm: () => void;
+  isLoading?: boolean;
 }
 
 export function DeleteWorktreeModal({
@@ -18,19 +18,25 @@ export function DeleteWorktreeModal({
   worktree,
   status,
   onConfirm,
-  isLoading = false
+  isLoading = false,
 }: DeleteWorktreeModalProps) {
-  if (!worktree || !status) return null
+  if (!worktree || !status) return null;
 
-  const isDirty = status.staged > 0 || status.modified > 0 || status.untracked > 0 || status.outgoing > 0
+  const isDirty =
+    status.staged > 0 ||
+    status.modified > 0 ||
+    status.untracked > 0 ||
+    status.outgoing > 0;
 
   return (
     <Modal isOpen={isOpen && isDirty} onClose={onClose} title="Delete Worktree">
       <div className="space-y-4">
         <p className="text-sm text-foreground">
-          The worktree <span className="font-semibold">{worktree.pathRelativeToHome}</span> is not clean and contains uncommitted changes:
+          The worktree{" "}
+          <span className="font-semibold">{worktree.pathRelativeToHome}</span>{" "}
+          is not clean and contains uncommitted changes:
         </p>
-        
+
         <div className="bg-muted/50 rounded p-3 space-y-1 text-sm">
           {status.staged > 0 && (
             <div className="text-green-600 dark:text-green-400">
@@ -55,15 +61,12 @@ export function DeleteWorktreeModal({
         </div>
 
         <p className="text-sm text-muted-foreground">
-          Are you sure you want to delete this worktree? This action cannot be undone.
+          Are you sure you want to delete this worktree? This action cannot be
+          undone.
         </p>
 
         <div className="flex gap-2 justify-end pt-4">
-          <Button
-            variant="secondary"
-            onClick={onClose}
-            disabled={isLoading}
-          >
+          <Button variant="secondary" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
           <Button
@@ -71,10 +74,10 @@ export function DeleteWorktreeModal({
             onClick={onConfirm}
             disabled={isLoading}
           >
-            {isLoading ? 'Deleting...' : 'Delete Anyway'}
+            {isLoading ? "Deleting..." : "Delete Anyway"}
           </Button>
         </div>
       </div>
     </Modal>
-  )
+  );
 }

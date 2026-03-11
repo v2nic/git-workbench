@@ -1,22 +1,22 @@
-import React from 'react'
-import { Button } from './ui/Button'
-import { DropdownMenu, DropdownMenuItem } from './ui/DropdownMenu'
-import { MoreVertical, Trash2 } from 'lucide-react'
-import { PRNotification } from '@/types/github'
+import React from "react";
+import { Button } from "./ui/Button";
+import { DropdownMenu, DropdownMenuItem } from "./ui/DropdownMenu";
+import { MoreVertical, Trash2 } from "lucide-react";
+import { PRNotification } from "@/types/github";
 
 interface PRActionsProps {
-  pr: PRNotification
-  hasMatchingWorktree: boolean
-  onDeleteWorktree: (pr: PRNotification) => void
+  pr: PRNotification;
+  hasMatchingWorktree: boolean;
+  onDeleteWorktree: (pr: PRNotification) => void;
 }
 
 export const PRActions: React.FC<PRActionsProps> = ({
   pr,
   hasMatchingWorktree,
-  onDeleteWorktree
+  onDeleteWorktree,
 }) => {
   if (!hasMatchingWorktree) {
-    return null
+    return null;
   }
 
   return (
@@ -34,5 +34,5 @@ export const PRActions: React.FC<PRActionsProps> = ({
         </div>
       </DropdownMenuItem>
     </DropdownMenu>
-  )
-}
+  );
+};
