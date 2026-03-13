@@ -1,6 +1,14 @@
 import { execCommand } from "./git";
 import { GitHubRepo, GitHubPullRequest } from "@/types/github";
 
+export interface ValidatedGitHubRepo {
+  owner: string;
+  repo: string;
+  fullName: string;
+  defaultBranch: string;
+  description?: string;
+}
+
 export async function checkGitHubAuth(): Promise<boolean> {
   try {
     await execCommand("gh auth status");
@@ -32,6 +40,71 @@ export async function searchGitHubRepos(query: string): Promise<GitHubRepo[]> {
   } catch (error) {
     throw new Error(
       `Failed to search GitHub repos: ${(error as Error).message}`,
+    );
+  }
+}
+
+export function parseGitHubRepoInput(input: string): { owner: string; repo: string } {
+  const trimmedInput = input.trim();
+
+  if (!trimmedInput) {
+    throw new Error("Please enter a repository URL");
+  }
+
+  if (trimmedInput.includes("github.com/")) {
+    const match = trimmedInput.match(/github\.com\/([^\/]+)\/([^\/\?#]+)/);
+    if (!match) {
+      throw new Error("Invalid GitHub URL format");
+    }
+
+    return {
+      owner: match[1],
+      repo: match[2].replace(/\.git$/, ""),
+    };
+  }
+
+  const parts = trimmedInput.split("/");
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    throw new Error("Invalid format. Use https://github.com/org/repo or org/repo");
+  }
+
+  return {
+    owner: parts[0],
+    repo: parts[1].replace(/\.git$/, ""),
+  };
+}
+
+export async function validateGitHubRepo(
+  input: string,
+): Promise<ValidatedGitHubRepo> {
+  const { owner, repo } = parseGitHubRepoInput(input);
+
+  if (!(await checkGitHubAuth())) {
+    throw new Error("GitHub CLI is not authenticated");
+  }
+
+  try {
+    const { stdout } = await execCommand(
+      `gh repo view "${owner}/${repo}" --json name,nameWithOwner,description,defaultBranchRef,owner`,
+    );
+    const repoData = JSON.parse(stdout) as {
+      name: string;
+      nameWithOwner: string;
+      description?: string | null;
+      defaultBranchRef?: { name?: string | null } | null;
+      owner?: { login?: string | null } | null;
+    };
+
+    return {
+      owner: repoData.owner?.login || owner,
+      repo: repoData.name || repo,
+      fullName: repoData.nameWithOwner || `${owner}/${repo}`,
+      defaultBranch: repoData.defaultBranchRef?.name || "main",
+      description: repoData.description || undefined,
+    };
+  } catch (error) {
+    throw new Error(
+      `Failed to validate repository: ${(error as Error).message}`,
     );
   }
 }

@@ -32,25 +32,8 @@ export const CloneRepoModal = memo(function CloneRepoModal({
     const trimmedUrl = urlToValidate.trim();
     if (!trimmedUrl) {
       setError("Please enter a repository URL");
-      setIsLoading(false);
-      return;
-    }
-
-    // Parse URL or org/repo format
-    let owner: string, repo: string;
-    if (trimmedUrl.includes("github.com/")) {
-      const match = trimmedUrl.match(/github\.com\/([^\/]+)\/([^\/\?]+)/);
-      if (!match) {
-        setError("Invalid GitHub URL format");
-        setIsLoading(false);
-        return;
-      }
-      owner = match[1];
-      repo = match[2].replace(".git", "");
-    } else if (trimmedUrl.includes("/")) {
-      [owner, repo] = trimmedUrl.split("/");
-    } else {
-      setError("Invalid format. Use https://github.com/org/repo or org/repo");
+      setIsValid(false);
+      setRepoInfo(null);
       setIsLoading(false);
       return;
     }
@@ -58,28 +41,23 @@ export const CloneRepoModal = memo(function CloneRepoModal({
     setError("");
 
     try {
-      // Validate repository exists via GitHub API
-      const response = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}`,
-      );
+      const response = await fetch("/api/clone/validate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url: trimmedUrl }),
+      });
+
       if (!response.ok) {
+        const errorData = (await response.json()) as { error?: string };
         throw new Error(
-          response.status === 404
-            ? "Repository not found"
-            : "Failed to validate repository",
+          errorData.error || "Failed to validate repository",
         );
       }
 
-      const repoData = await response.json();
-      const newRepoInfo: RepoInfo = {
-        owner,
-        repo,
-        fullName: repoData.full_name,
-        defaultBranch: repoData.default_branch,
-        description: repoData.description,
-      };
-
-      setRepoInfo(newRepoInfo);
+      const validatedRepo = (await response.json()) as RepoInfo;
+      setRepoInfo(validatedRepo);
       setIsValid(true);
       setError("");
     } catch (err) {

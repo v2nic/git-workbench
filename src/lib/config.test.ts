@@ -3,16 +3,22 @@ import type { RepoConfig } from "../types/config";
 
 const mockReadFile = vi.fn();
 const mockWriteFile = vi.fn();
+const mockAccess = vi.fn();
+const mockMkdir = vi.fn();
 
 // Mock fs module
 vi.mock("fs", () => ({
   default: {
     promises: {
+      access: mockAccess,
+      mkdir: mockMkdir,
       readFile: mockReadFile,
       writeFile: mockWriteFile,
     },
   },
   promises: {
+    access: mockAccess,
+    mkdir: mockMkdir,
     readFile: mockReadFile,
     writeFile: mockWriteFile,
   },
@@ -39,6 +45,8 @@ describe("config", () => {
     vi.clearAllMocks();
     vi.resetModules();
     process.env.APP_DATA_PATH = "/app/data";
+    mockAccess.mockResolvedValue(undefined);
+    mockMkdir.mockResolvedValue(undefined);
 
     const mod = await import("./config");
     getConfig = mod.getConfig;
@@ -56,11 +64,20 @@ describe("config", () => {
         repos: [],
       };
 
+      const expectedConfig = {
+        ...mockConfig,
+        editor: {
+          name: "VS Code",
+          scheme: "vscode",
+          icon: "Code",
+        },
+      };
+
       mockReadFile.mockResolvedValue(JSON.stringify(mockConfig));
 
       const config = await getConfig();
 
-      expect(config).toEqual(mockConfig);
+      expect(config).toEqual(expectedConfig);
       expect(mockReadFile).toHaveBeenCalledWith(mockConfigPath, "utf-8");
     });
 
