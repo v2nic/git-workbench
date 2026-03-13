@@ -30,6 +30,7 @@ export function AppShell() {
     setSearchQuery,
     jumpToRepo,
     jumpToWorktrees,
+    jumpToRepositories,
     jumpToWorktreesForRepo,
     jumpToPullRequests,
     jumpToRepoPullRequests,
@@ -83,6 +84,14 @@ export function AppShell() {
       mutateWorktrees();
     },
     [jumpToWorktreesForRepo, mutateWorktrees],
+  );
+
+  const handleJumpToRepositories = useCallback(
+    (repoName?: string) => {
+      jumpToRepositories(repoName);
+      mutateRepos();
+    },
+    [jumpToRepositories, mutateRepos],
   );
 
   const handleJumpToPullRequests = useCallback(
@@ -403,7 +412,7 @@ export function AppShell() {
           onClose={() => setCloneRepoModalOpen(false)}
           onSuccess={success}
           onError={error}
-          onNavigateToWorktrees={handleJumpToWorktrees}
+          onNavigateToRepositories={handleJumpToRepositories}
         />
 
         {/* Create Worktree Modal */}

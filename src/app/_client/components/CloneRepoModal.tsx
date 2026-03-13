@@ -9,7 +9,7 @@ export interface CloneRepoModalProps {
   onClose: () => void;
   onSuccess?: (message: string) => void;
   onError?: (message: string) => void;
-  onNavigateToWorktrees?: (repoName: string) => void;
+  onNavigateToRepositories?: (repoName: string) => void;
 }
 
 export const CloneRepoModal = memo(function CloneRepoModal({
@@ -17,7 +17,7 @@ export const CloneRepoModal = memo(function CloneRepoModal({
   onClose,
   onSuccess,
   onError,
-  onNavigateToWorktrees,
+  onNavigateToRepositories,
 }: CloneRepoModalProps) {
   const [url, setUrl] = useState("");
   const [isValid, setIsValid] = useState(false);
@@ -132,8 +132,8 @@ export const CloneRepoModal = memo(function CloneRepoModal({
 
       // Close modal and navigate
       onClose();
-      if (onNavigateToWorktrees) {
-        onNavigateToWorktrees(repoInfo.repo);
+      if (onNavigateToRepositories) {
+        onNavigateToRepositories(repoInfo.repo);
       }
     } catch (err) {
       const errorMessage =
@@ -150,7 +150,7 @@ export const CloneRepoModal = memo(function CloneRepoModal({
     onSuccess,
     onError,
     onClose,
-    onNavigateToWorktrees,
+    onNavigateToRepositories,
   ]);
 
   const clearError = useCallback(() => {

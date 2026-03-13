@@ -1,10 +1,11 @@
-import React, { useMemo, useCallback, useEffect } from "react";
+import React, { useMemo, useCallback, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { useRepos } from "../data/useRepos";
-import { useConfig } from "../data/useConfig";
 import { RepoRow } from "./RepoRow";
 import { Input } from "./ui/Input";
 import { Button } from "./ui/Button";
 import { Plus, Search, X, Download } from "lucide-react";
+import clsx from "clsx";
 
 interface RepoListViewProps {
   showFavoritesOnly?: boolean;
@@ -38,7 +39,9 @@ export function RepoListView({
   onSearchChange,
 }: RepoListViewProps) {
   const { repos, isLoading, error, mutate } = useRepos();
-  const { config } = useConfig();
+  const searchParams = useSearchParams();
+  const highlightedRepo = searchParams.get("repo");
+  const repoRowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const filteredRepos = useMemo(() => {
     let filtered = repos;
@@ -103,6 +106,17 @@ export function RepoListView({
   const handleClearSearch = useCallback(() => {
     onSearchChange("");
   }, [onSearchChange]);
+
+  useEffect(() => {
+    if (!highlightedRepo || showFavoritesOnly) return;
+
+    const targetElement = repoRowRefs.current.get(highlightedRepo);
+    if (!targetElement) return;
+
+    setTimeout(() => {
+      targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 100);
+  }, [highlightedRepo, filteredRepos, showFavoritesOnly]);
 
   const handleCloneRepoByName = useCallback(
     async (repoName: string) => {
@@ -215,20 +229,34 @@ export function RepoListView({
         ) : (
           <div>
             {filteredRepos.map((repo) => (
-              <RepoRow
+              <div
                 key={repo.repoName}
-                repo={repo}
-                onToggleFavorite={handleToggleFavorite}
-                onJumpToWorktrees={onJumpToWorktrees}
-                onCreateWorktree={onCreateWorktree}
-                onCloneRepo={handleCloneRepoByName}
-                onDeleteRepo={onDeleteRepo || handleDeleteRepo}
-                onJumpToPullRequests={onJumpToPullRequests}
-                onJumpToBranches={onJumpToBranches}
-                onPublishRepo={onPublishRepo}
-                onTrackRepo={onTrackRepo}
-                needsClone={repo.needsClone}
-              />
+                ref={(element) => {
+                  if (element) {
+                    repoRowRefs.current.set(repo.repoName, element);
+                  } else {
+                    repoRowRefs.current.delete(repo.repoName);
+                  }
+                }}
+                className={clsx(
+                  highlightedRepo === repo.repoName &&
+                    "worktree-highlight-permanent dark:worktree-highlight-permanent-dark",
+                )}
+              >
+                <RepoRow
+                  repo={repo}
+                  onToggleFavorite={handleToggleFavorite}
+                  onJumpToWorktrees={onJumpToWorktrees}
+                  onCreateWorktree={onCreateWorktree}
+                  onCloneRepo={handleCloneRepoByName}
+                  onDeleteRepo={onDeleteRepo || handleDeleteRepo}
+                  onJumpToPullRequests={onJumpToPullRequests}
+                  onJumpToBranches={onJumpToBranches}
+                  onPublishRepo={onPublishRepo}
+                  onTrackRepo={onTrackRepo}
+                  needsClone={repo.needsClone}
+                />
+              </div>
             ))}
           </div>
         )}

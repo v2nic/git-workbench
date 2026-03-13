@@ -44,6 +44,21 @@ export function useAppNavigation() {
     router.push("/worktrees", { scroll: false });
   }, [router]);
 
+  const jumpToRepositories = useCallback(
+    (repoName?: string) => {
+      setSearchQuery("");
+      if (repoName) {
+        router.push(`/repositories?repo=${encodeURIComponent(repoName)}`, {
+          scroll: false,
+        });
+        return;
+      }
+
+      router.push("/repositories", { scroll: false });
+    },
+    [router],
+  );
+
   const jumpToWorktreesForRepo = useCallback(
     (repoName: string, worktreePath?: string) => {
       setSearchQuery("");
@@ -92,6 +107,7 @@ export function useAppNavigation() {
     setSearchQuery,
     jumpToRepo,
     jumpToWorktrees,
+    jumpToRepositories,
     jumpToWorktreesForRepo,
     jumpToPullRequests,
     jumpToRepoPullRequests,
