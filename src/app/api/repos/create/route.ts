@@ -168,7 +168,7 @@ export async function POST(request: Request) {
         await fs.rm(tempDir, { recursive: true, force: true });
 
         // Now create the worktree with the specified branch
-        const worktreeDir = path.join(worktreeRootPath, cleanWorktreeName);
+        const worktreeDir = path.join(worktreePath, cleanWorktreeName);
         await fs.mkdir(worktreeDir, { recursive: true });
 
         // If worktree branch is different from default branch, create it first

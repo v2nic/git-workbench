@@ -148,10 +148,16 @@ export class PullRequestsWorker {
   public ensureStarted() {
     if (this.started) return;
     this.started = true;
+    this.running = true; // Set immediately to prevent concurrent loop starts
     if (!this.abortController) {
       this.abortController = new AbortController();
     }
-    void this.loop(this.abortController.signal);
+    // Don't await - let loop run in background
+    void this.loop(this.abortController.signal).finally(() => {
+      // If loop exits unexpectedly, allow restart
+      this.running = false;
+      this.started = false;
+    });
   }
 
   public stop() {
@@ -572,8 +578,8 @@ export class PullRequestsWorker {
     const asOf = Date.now();
     this.emit({ type: "status", status: { type: "starting" }, asOf });
 
-    if (this.running) return;
-    this.running = true;
+    // this.running is already set in ensureStarted() to prevent race conditions
+    // No need for an additional guard here
 
     let cooldownUntil = 0;
 
@@ -644,7 +650,7 @@ export class PullRequestsWorker {
         }
       }
     } finally {
-      this.running = false;
+      // Cleanup is handled by ensureStarted()'s .finally() handler
     }
   }
 }
