@@ -191,6 +191,14 @@ export function usePullRequests() {
     return () => clearInterval(id);
   }, [timestamp]);
 
+  const addPullRequest = useCallback((pr: PRNotification) => {
+    const key = pr.url; // Use URL as the unique key
+    if (!prsByUrlRef.current.has(key)) {
+      prsByUrlRef.current.set(key, pr);
+      publish();
+    }
+  }, [publish]);
+
   const refreshPullRequests = useCallback(() => {
     setUpdateAvailable(false);
     // Force a refresh by triggering publish with current data
@@ -209,6 +217,7 @@ export function usePullRequests() {
       errorMessage,
       updateAvailable,
       refreshPullRequests,
+      addPullRequest,
     }),
     [
       pullRequests,
@@ -221,6 +230,7 @@ export function usePullRequests() {
       errorMessage,
       updateAvailable,
       refreshPullRequests,
+      addPullRequest,
     ],
   );
 

@@ -526,42 +526,29 @@ export class PullRequestsWorker {
       }
 
       for (const [repo, prs] of Array.from(prsByRepo.entries())) {
-        const prNumbers = prs.map((pr: any) => pr.number).join(" ");
-        if (!prNumbers) continue;
+        if (prs.length === 0) continue;
 
-        try {
-          const prDetails = await this.ghJson<any>(
-            `gh api repos/${repo}/pulls --paginate --jq '.[] | select(.number == ${prs.map((p: any) => p.number).join(" or .number == ")})'`,
-            "favorite_repo",
-            signal,
-          );
+        // Fetch each PR individually to avoid JSON parsing issues with --paginate + jq
+        for (const pr of prs) {
+          try {
+            const prDetails = await this.ghJson<any>(
+              `gh api repos/${repo}/pulls/${pr.number}`,
+              "favorite_repo",
+              signal,
+            );
 
-          // Ensure prDetails is an array
-          const detailsArray = Array.isArray(prDetails)
-            ? prDetails
-            : [prDetails].filter(Boolean);
-          const detailsMap = new Map(detailsArray.map((pr) => [pr.number, pr]));
-
-          for (const pr of prs) {
-            const details = detailsMap.get(pr.number);
-            if (details) {
-              const mergedPR = {
-                ...pr,
-                headRefName:
-                  details.head?.ref || pr.headRefName || `pr-${pr.number}`,
-                state: details.state,
-                merged: details.merged,
-                closedAt: details.closed_at,
-                updatedAt: details.updated_at,
-              };
-              results.push(this.normalize(mergedPR, "favorite", repo));
-            } else {
-              results.push(this.normalize(pr, "favorite", repo));
-            }
-          }
-        } catch (error) {
-          console.warn(`Failed to fetch batch details for ${repo}:`, error);
-          for (const pr of prs) {
+            const mergedPR = {
+              ...pr,
+              headRefName:
+                prDetails.head?.ref || pr.headRefName || `pr-${pr.number}`,
+              state: prDetails.state,
+              merged: prDetails.merged,
+              closedAt: prDetails.closed_at,
+              updatedAt: prDetails.updated_at,
+            };
+            results.push(this.normalize(mergedPR, "favorite", repo));
+          } catch (error) {
+            console.warn(`Failed to fetch PR #${pr.number} for ${repo}:`, error);
             results.push(this.normalize(pr, "favorite", repo));
           }
         }

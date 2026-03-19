@@ -14,6 +14,7 @@ import { RepositoryHeader } from "./RepositoryHeader";
 import { DeleteWorktreeModal } from "./DeleteWorktreeModal";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
+import { Spinner } from "./ui/Spinner";
 import {
   GitPullRequest,
   CheckCircle,
@@ -21,6 +22,7 @@ import {
   AlertTriangle,
   XCircle,
   RefreshCw,
+  Search,
 } from "lucide-react";
 import { PRNotification } from "@/types/github";
 import { Worktree, WorktreeStatus } from "@/types/worktrees";
@@ -63,6 +65,7 @@ export function PullRequestsView({
     errorMessage,
     updateAvailable,
     refreshPullRequests,
+    addPullRequest,
   } = usePullRequests();
   const { config } = useConfig();
   const { worktrees, mutate: mutateWorktrees } = useWorktrees();
@@ -77,9 +80,82 @@ export function PullRequestsView({
   const [pendingDeleteStatus, setPendingDeleteStatus] =
     useState<WorktreeStatus | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [fetchingUrlPR, setFetchingUrlPR] = useState(false);
+  const [urlFetchError, setUrlFetchError] = useState<string | null>(null);
   const prRowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const retryLabel = retryInSeconds ?? 10;
+
+  // Check if search query is a GitHub PR URL
+  const isPRUrl = useMemo(() => {
+    const query = searchQuery.trim();
+    if (!query) return false;
+    // Match GitHub PR URLs like:
+    // https://github.com/owner/repo/pull/123
+    // https://github.com/owner/repo/pull/123/changes
+    return /github\.com\/[^\/]+\/[^\/]+\/pull\/\d+/i.test(query);
+  }, [searchQuery]);
+
+  // Extract PR URL for lookup
+  const prUrlFromSearch = useMemo(() => {
+    if (!isPRUrl) return null;
+    const query = searchQuery.trim();
+    // Try to find a valid GitHub URL in the search
+    const match = query.match(/https?:\/\/github\.com\/[^\/]+\/[^\/]+\/pull\/\d+/i);
+    return match ? match[0] : null;
+  }, [searchQuery, isPRUrl]);
+
+  // Fetch PR by URL when it's not found in the list
+  const fetchPRByUrl = useCallback(async (url: string) => {
+    if (fetchingUrlPR) return;
+
+    setFetchingUrlPR(true);
+    setUrlFetchError(null);
+
+    try {
+      const response = await fetch(`/api/pull-requests/fetch?url=${encodeURIComponent(url)}`);
+
+      if (!response.ok) {
+        const data = await response.json();
+        if (response.status === 404) {
+          setUrlFetchError("Pull request not found");
+        } else {
+          setUrlFetchError(data.error || "Failed to fetch pull request");
+        }
+        return;
+      }
+
+      const data = await response.json();
+      if (data.pullRequest) {
+        addPullRequest(data.pullRequest);
+      }
+    } catch (error) {
+      console.error("Failed to fetch PR by URL:", error);
+      setUrlFetchError("Failed to fetch pull request");
+    } finally {
+      setFetchingUrlPR(false);
+    }
+  }, [fetchingUrlPR, addPullRequest]);
+
+  // Effect to handle URL search
+  useEffect(() => {
+    if (!isPRUrl || !prUrlFromSearch) {
+      setFetchingUrlPR(false);
+      setUrlFetchError(null);
+      return;
+    }
+
+    // Check if the PR is already in the list
+    const prExists = pullRequests.some((pr) => pr.html_url === prUrlFromSearch || pr.url === prUrlFromSearch);
+    if (prExists) {
+      setFetchingUrlPR(false);
+      setUrlFetchError(null);
+      return;
+    }
+
+    // Fetch the PR if it's not in the list
+    fetchPRByUrl(prUrlFromSearch);
+  }, [isPRUrl, prUrlFromSearch, pullRequests, fetchPRByUrl]);
 
   useEffect(() => {
     if (highlightPRNumber && highlightPRRepository) {
@@ -128,7 +204,9 @@ export function PullRequestsView({
           pr.repository.toLowerCase().includes(query) ||
           pr.headRef.toLowerCase().includes(query) ||
           pr.author.login.toLowerCase().includes(query) ||
-          pr.number.toString().includes(query),
+          pr.number.toString().includes(query) ||
+          pr.html_url.toLowerCase().includes(query) ||
+          pr.url.toLowerCase().includes(query),
       );
     }
 
@@ -391,7 +469,7 @@ export function PullRequestsView({
           <div className="flex-1">
             <Input
               type="text"
-              placeholder="Search pull requests..."
+              placeholder="Search or paste GitHub PR URL..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full"
@@ -422,11 +500,29 @@ export function PullRequestsView({
           </div>
         ) : Object.keys(filteredAndGroupedPRs).length === 0 ? (
           <div className="p-6 text-center">
-            <p className="text-muted-foreground">
-              {searchQuery
-                ? "No pull requests match your search"
-                : "No pull requests found"}
-            </p>
+            {isPRUrl && fetchingUrlPR ? (
+              <div className="flex flex-col items-center gap-3">
+                <Spinner size="lg" />
+                <p className="text-muted-foreground">Fetching pull request...</p>
+                <p className="text-xs text-muted-foreground break-all max-w-md">
+                  {prUrlFromSearch}
+                </p>
+              </div>
+            ) : isPRUrl && urlFetchError ? (
+              <div className="flex flex-col items-center gap-3">
+                <Search className="w-8 h-8 text-muted-foreground" />
+                <p className="text-destructive font-medium">Pull request not found</p>
+                <p className="text-xs text-muted-foreground">
+                  {urlFetchError}. The PR may be closed, merged, or not accessible.
+                </p>
+              </div>
+            ) : (
+              <p className="text-muted-foreground">
+                {searchQuery
+                  ? "No pull requests match your search"
+                  : "No pull requests found"}
+              </p>
+            )}
           </div>
         ) : (
           <div>
