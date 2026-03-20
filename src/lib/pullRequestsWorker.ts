@@ -9,6 +9,11 @@ const execAsync = promisify(exec);
 
 const PERSIST_PATH = "/tmp/git-workbench-pr-worker-cache.json";
 
+// Prevent EventTarget memory leak warnings from AbortSignals
+if (typeof AbortSignal !== "undefined") {
+  (AbortSignal as unknown as { defaultMaxListeners: number }).defaultMaxListeners = 50;
+}
+
 type WorkerStatus =
   | { type: "starting" }
   | { type: "running" }
@@ -204,7 +209,8 @@ export class PullRequestsWorker {
     signal: AbortSignal,
   ): Promise<T> {
     await this.bucket.waitAndConsume(REQUEST_COST[kind], signal);
-    const { stdout } = await execAsync(command, { timeout: 20000 });
+    // Use 60s timeout for all gh api calls to handle slow responses
+    const { stdout } = await execAsync(command, { timeout: 60000 });
 
     // Handle empty or malformed responses
     if (!stdout || stdout.trim() === "") {
@@ -529,6 +535,7 @@ export class PullRequestsWorker {
         if (prs.length === 0) continue;
 
         // Fetch each PR individually to avoid JSON parsing issues with --paginate + jq
+        let failedCount = 0;
         for (const pr of prs) {
           try {
             const prDetails = await this.ghJson<any>(
@@ -548,9 +555,12 @@ export class PullRequestsWorker {
             };
             results.push(this.normalize(mergedPR, "favorite", repo));
           } catch (error) {
-            console.warn(`Failed to fetch PR #${pr.number} for ${repo}:`, error);
+            failedCount++;
             results.push(this.normalize(pr, "favorite", repo));
           }
+        }
+        if (failedCount > 0) {
+          console.warn(`Failed to fetch ${failedCount}/${prs.length} PRs for ${repo} - using basic data`);
         }
       }
 

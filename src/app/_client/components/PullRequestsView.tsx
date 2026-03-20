@@ -178,7 +178,19 @@ export function PullRequestsView({
 
   // Filter and group pull requests
   const filteredAndGroupedPRs = useMemo(() => {
-    // First, filter to show only open PRs (not merged or closed)
+    // When a PR URL is pasted, show only that specific PR
+    if (isPRUrl && prUrlFromSearch) {
+      const matchingPRs = pullRequests.filter(
+        (pr) => pr.html_url === prUrlFromSearch || pr.url === prUrlFromSearch,
+      );
+      if (matchingPRs.length > 0) {
+        return { "Matching Pull Request": matchingPRs };
+      }
+      // If no matching PRs yet, show all PRs so the user sees the list while loading
+      return { "All Pull Requests": pullRequests };
+    }
+
+    // Normal filter: show only open PRs (not merged or closed)
     let filtered = pullRequests.filter(
       (pr) => pr.state === "open" && !pr.merged,
     );
@@ -195,8 +207,8 @@ export function PullRequestsView({
       filtered = filtered.filter((pr) => pr.draft);
     }
 
-    // Apply search filter
-    if (searchQuery) {
+    // Apply search filter (skip when isPRUrl, as we handle that separately)
+    if (searchQuery && !isPRUrl) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (pr) =>
@@ -251,7 +263,7 @@ export function PullRequestsView({
       });
 
     return result;
-  }, [pullRequests, searchQuery, groupBy, statusFilter, filterRepo]);
+  }, [pullRequests, searchQuery, groupBy, statusFilter, filterRepo, isPRUrl]);
 
   const handleCopyNumber = useCallback((number: number) => {
     if (typeof window !== "undefined" && navigator.clipboard) {
